@@ -1,0 +1,55 @@
+# review-epubmaker向けの設定ファイルの例。
+# yamlファイルをReVIEWファイルのある場所に置き、
+# 「review-epubmaker yamlファイル」を実行すると、<bookname>.epubファイルが
+# 生成されます。
+# このファイルはUTF-8エンコーディングで記述してください。
+
+# ブック名(ファイル名になるもの。ASCII範囲の文字を使用)
+bookname: book
+# 書名
+booktitle: 徹底解剖「G1GC」実装編（執筆中）
+# 著者
+aut: 中村成洋
+date: 2011-12-25
+rights: |
+  (C) 2011 Narihiro Nakamura
+description: 本書はOpenJDK7のG1GCの実装と、それに関連する技術を解説します。
+# 以下はオプション
+# prt: 出版社
+# asn: Associated name
+# ant: Bibliographic antecedent
+# clb: 貢献者
+# edt: 編集者
+# dsr: デザイナ
+# ill: イラストレータ
+# pht: 撮影者
+# trl: 翻訳者
+# date: 刊行日
+# rights: 権利表記
+# description: ブックの説明
+#
+# coverfile: カバーページのbody要素内に挿入する内容を記述したファイル名
+# coverimage: 表紙用画像ファイル
+# 固有IDに使用するドメイン
+coverfile: _cover.html
+coverimage: cover.jpg
+urnid: http://www.narihiro.info/ebook/g1gc-impl/20111225/
+# CSSファイル (yamlファイルおよびReVIEWファイルを置いたディレクトリにあること)
+stylesheet: stylesheet.css
+# styファイル
+# texstyle: tatsumacro
+# 目次として抽出するレベル
+toclevel: 2
+# セクション番号を表示するレベル
+secnolevel: 3
+# review-compileに渡すパラメータ
+params: --stylesheet=stylesheet.css --subdirmode
+# 目次生成用？
+mytoc: true
+# 奥付用
+#pubhistory: |
+#(none)
+# debug
+# debug: false
+debug: true
+

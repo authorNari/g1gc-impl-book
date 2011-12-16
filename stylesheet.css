@@ -1,0 +1,197 @@
+@charset "utf-8";
+body {
+  margin: 0;
+  padding: 0;
+  font-size: 1em;
+  font-family: KozMinPro-Light, IPAPMincho, MS-PMincho, serif;
+  width: 45em;
+  line-height: 1.5;
+}
+
+.title { text-align: center; }
+
+.todo  { color: red; font-weight: bold;}
+
+.done { color: green; }
+
+.timestamp { color: grey }
+
+.timestamp-kwd { color: CadetBlue }
+
+.tag { background-color:lightblue; font-weight:normal }
+
+.target { background-color: lavender; }
+
+table {
+    border-collapse: collapse;
+    margin-top: 0px;
+    margin-bottom: 1em;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+td {
+    vertical-align: top;
+    border-top: 1pt solid black;
+    border-bottom: 1pt solid black;
+}
+
+th {
+    text-align: left;
+    vertical-align: top;
+    border-top: 1pt solid black;
+    border-bottom: 1pt solid black;
+}
+
+p {
+    text-indent: 1em;
+    margin: 0;
+    line-height: 1.5em;
+    letter-spacing: 1px;
+}
+
+li {
+    line-height: 1.5em;
+}
+
+li p {
+    text-indent: 0;
+}
+
+h1 {
+  font-size: 2em;
+}
+
+h2 {
+  border-bottom: 2px solid gray;
+  padding-bottom: 5px;
+}
+
+h3 {
+  border-bottom: 1px solid gray;
+  padding-bottom: 5px;
+}
+
+.image .caption {
+  text-align: center;
+  margin-top:1em;
+  margin-bottom: 1em;
+  text-align: center;
+  font-family: HiraMaruPro-W4, IPAPGothic, MS-PGothic, sans-serif;
+  font-size: 80%;
+  text-indent: 0;
+}
+
+.source-code .caption, .caption-code .caption,
+.code .caption, .source-code .caption,
+.emlist-code .caption, .list-code .caption {
+  font-family: HiraMaruPro-W4, IPAPGothic, MS-PGothic, sans-serif;
+  color:gray;
+  font-size:100%;
+  margin-top:1em;
+}
+
+div.image img {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    max-width: 100%;
+    display: block;
+    margin-top: 1.5em;
+}
+
+div.fn {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    width: 75%;
+    margin-left: auto;
+    margin-right: 0;
+    font-size: 80%;
+    text-indent: -1em;
+    font-weight: bold;
+    font-family: HiraMaruPro-W4, IPAPGothic, MS-PGothic, sans-serif;
+}
+
+div.fn p {
+    text-indent: 0;
+}
+
+.tips { 
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border: 1px solid black;
+    font-size: 90%;
+    margin: 1em 2em;
+    padding: 1em;
+    font-family: HiraMaruPro-W4, IPAPGothic, MS-PGothic, sans-serif;
+}
+
+.tips p {
+    text-indent: 0;
+    margin-top: 1em;
+}
+
+.column {
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border: 2px solid gray;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    padding: 10px;
+    padding-top: 0;
+}
+
+.column h4, .column h5 {
+    border-bottom: 2px solid gray;
+    padding-bottom: 10px;
+}
+
+.caption-code, .code, .source-code, .emlist-code, .emlistnum-code, .list-code .listnum-code {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 2em;
+    font-size: 80%;
+}
+
+.caption-code pre, .code pre, .source-code pre, .emlist-code pre, .emlistnum-code pre, .list-code pre, .listnum-code pre {
+    font-size: 10pt;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    overflow: auto;
+    font-family: Courier, monospace;
+    margin: 0;
+    white-space: pre;
+    color: black;
+    padding: 1em;
+}
+
+.tech_note {
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border: 2px solid #809FFF;
+    color: #333333;
+    padding: 1em;
+    /*width: 45em;*/
+}
+
+div.footnote {
+  text-align: right;
+}
+
+div.footnote p.footnote {
+  color: gray;
+  font-size: 80%;
+}
+
+.inline-code {
+    font-family: Courier, monospace;
+}
+
+blockquote {
+  border:1px solid #E0E0E0;
+  font-size: 80%;
+  line-height:150%;
+  margin:0 0 8px;
+  padding:8px;
+}
