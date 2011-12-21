@@ -10,7 +10,7 @@ end
 
 def bin(b)
   ENV["BIN_DIR"] ||= ""
-  File.join(ENV["BIN_DIR"], "#{b}")
+  ENV["BIN_DIR"].empty? ? b : File.join(ENV["BIN_DIR"], "#{b}")
 end
 
 desc "原稿の文字数や行数などを集計する。"
