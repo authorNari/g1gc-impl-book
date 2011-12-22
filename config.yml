@@ -10,6 +10,7 @@ bookname: book
 booktitle: 徹底解剖「G1GC」実装編（執筆中）
 # 著者
 aut: 中村成洋
+prt: www.narihiro.info
 date: 2011-12-25
 rights: |
   (C) 2011 Narihiro Nakamura
@@ -36,8 +37,8 @@ coverimage: cover.jpg
 urnid: http://www.narihiro.info/ebook/g1gc-impl/20111225/
 # CSSファイル (yamlファイルおよびReVIEWファイルを置いたディレクトリにあること)
 stylesheet: stylesheet.css
-# styファイル
-# texstyle: tatsumacro
+texstyle: review
+texdocumentclass: ["jsbook", "oneside"]
 # 目次として抽出するレベル
 toclevel: 2
 # セクション番号を表示するレベル

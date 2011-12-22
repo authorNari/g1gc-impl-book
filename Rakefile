@@ -55,12 +55,16 @@ desc "現在のebookを生成する"
 task :ebook do
   bn = @config['bookname']
   d = @config['date'].strftime('%Y%m%d')
-  sh("rm -rf #{bn} #{bn}.epub #{bn}.mobi")
+  sh("rm -rf #{bn} #{bn}.epub #{bn}.mobi #{bn}.pdf")
   sh("#{bin('review-epubmaker')} config.yml")
   sh("./misc/kindlegen #{bn}.epub")
   sh("mkdir -p ebook")
   sh("mv #{bn}.epub ebook/g1gc-impl-#{d}.epub")
   sh("mv #{bn}.mobi ebook/g1gc-impl-#{d}.mobi")
+  sh("rm -rf #{bn}")
+  sh("review-pdfmaker config.yml")
+  sh("mv #{bn}.pdf ebook/g1gc-impl-#{d}.pdf")
+  sh("rm -rf #{bn}")
 end
 
 task :clean do
