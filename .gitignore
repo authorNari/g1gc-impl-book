@@ -2,6 +2,10 @@ pkg
 book
 book.epub
 book.mobi
+book.pdf
+book.log
+*.html
+ebook
 *~
 misc/kindlegen
 tools
