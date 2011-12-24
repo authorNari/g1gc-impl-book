@@ -27,6 +27,7 @@
 寄付には以下をご利用ください。Paypalが使えて、匿名でも寄付できます。20万円を目標に設定しており、達成したら寄付の受付を終了し、残りの執筆に着手します。
 
 [Pledgie — Donate To: "Book: Implementation of G1GC"](http://www.pledgie.com/campaigns/16436)
+
 <a href='http://www.pledgie.com/campaigns/16436'><img alt='Click here to lend your support to: Book: Implementation of G1GC and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/16436.png?skin_name=chrome' border='0' /></a>
 
 ※寄付いただいたみなさまの名前は[スポンサーのみなさま](http://www.narihiro.info/g1gc-impl-book/sponsor.html)に随時追加します。
