@@ -1,5 +1,6 @@
 = スポンサーのみなさま
 
+  * Anonymous様
   * @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 本書ではスポンサーを募集しています。
