@@ -1,5 +1,6 @@
 = スポンサーのみなさま
 
+  * @<href>{http://pledgie.com/accounts/koichi-kimura, Koichi Kimura様}
   * Anonymous様
   * @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
