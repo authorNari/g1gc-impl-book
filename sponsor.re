@@ -4,6 +4,7 @@
 
   * @<href>{http://pledgie.com/accounts/koichi-kimura, Koichi Kimura様}
   * @<href>{http://pledgie.com/accounts/koheiyashiro, Kohei Yashiro様}
+  * @<href>{http://pledgie.com/accounts/@tmpz84, @tmpz84様}
   * @<href>{http://pledgie.com/accounts/@natsutan, @natsutan様}
   * @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
   * Anonymous様
