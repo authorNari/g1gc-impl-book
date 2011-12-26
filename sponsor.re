@@ -2,6 +2,7 @@
 
 本書は下記のスポンサーのみなさまの応援によって執筆されています！！　ありがとうございます！！
 
+  * @<href>{http://pledgie.com/accounts/@takahashim, @takahashim様}
   * @<href>{http://pledgie.com/accounts/koichi-kimura, Koichi Kimura様}
   * @<href>{http://pledgie.com/accounts/koheiyashiro, Kohei Yashiro様}
   * @<href>{http://pledgie.com/accounts/@tmpz84, @tmpz84様}
