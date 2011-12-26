@@ -36,6 +36,8 @@
 
 みなさまの温かいご支援をおまちしております ﾟ+.(･ω･)ﾟ+.ﾟ
 
+[補足:寄付方式にした意図](http://d.hatena.ne.jp/authorNari/20111226/1324892029)
+
 ## 間違いの指摘・感想など
 
 [authorNari/g1gc-impl-book - GitHub](https://github.com/authorNari/g1gc-impl-book/)にissue登録するなり、コメントなり、pull requestするなり、ご自由にどうぞ！！
