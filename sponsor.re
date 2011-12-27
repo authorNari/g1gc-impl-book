@@ -31,6 +31,8 @@
 
 @<icon>{ryuone-sama} @<href>{http://pledgie.com/accounts/@ryuone, @ryuone様}
 
+@<icon>{littlestarling-sama} @<href>{http://pledgie.com/accounts/@littlestarling, @littlestarling様}
+
 @<icon>{anonymous-1} Anonymous様
 
 @<icon>{miura1729-sama} @<href>{http://pledgie.com/accounts/@miura1729, @miura1729様}
