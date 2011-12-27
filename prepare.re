@@ -20,7 +20,7 @@ HotspotVMのもう1つの特徴は複数のGCアルゴリズムが実装され�
 
 == OpenJDKとは
 
-Javaの開発用プルグラミングツール群のことをまとめて「Java SE Development Kit（JDK）」と呼びます。
+Javaの開発用プログラミングツール群のことをまとめて「Java SE Development Kit（JDK）」と呼びます。
 
 JDKにはHotspotVMの他に、JavaのソースコードをJavaバイトコードにコンパイルするJavaコンパイラ、Javaソースコードからドキュメントを生成するツール等が同梱されています。
 
