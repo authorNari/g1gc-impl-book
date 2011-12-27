@@ -38,6 +38,8 @@
 
 @<icon>{suzumura_ss-sama} @<href>{http://pledgie.com/accounts/@suzumura_ss, @suzumura_ss様}
 
+@<icon>{mrkn-sama} @<href>{http://pledgie.com/accounts/mrkn20, Kenta Murata様}
+
 @<icon>{rane_hs-sama} @<href>{http://pledgie.com/accounts/@rane_hs, @rane_hs様}
 
 @<icon>{ryuone-sama} @<href>{http://pledgie.com/accounts/@ryuone, @ryuone様}
