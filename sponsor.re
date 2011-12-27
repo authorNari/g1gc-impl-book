@@ -5,11 +5,11 @@
 
 @<icon>{takahashim-sama} @<href>{http://pledgie.com/accounts/@takahashim, @takahashim様}
 
+@<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
+
 @<icon>{kimura-sama} @<href>{http://pledgie.com/accounts/koichi-kimura, Koichi Kimura様}
 
 @<icon>{yahisro-sama} @<href>{http://pledgie.com/accounts/koheiyashiro, Kohei Yashiro様}
-
-@<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
 
 @<icon>{koichiroo-sama} @<href>{http://pledgie.com/accounts/koichiroo, Koichiro Ohba様}
 
