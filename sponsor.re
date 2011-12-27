@@ -33,6 +33,8 @@
 
 @<icon>{tmoro-sama} @<href>{http://pledgie.com/accounts/@tmoro, @tmoro様}
 
+@<icon>{suzumura_ss-sama} @<href>{http://pledgie.com/accounts/@suzumura_ss, @suzumura_ss様}
+
 @<icon>{rane_hs-sama} @<href>{http://pledgie.com/accounts/@rane_hs, @rane_hs様}
 
 @<icon>{ryuone-sama} @<href>{http://pledgie.com/accounts/@ryuone, @ryuone様}
