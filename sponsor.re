@@ -11,6 +11,8 @@
 
 @<icon>{tmpz84-sama} @<href>{http://pledgie.com/accounts/@tmpz84, @tmpz84様}
 
+@<icon>{kiwanami-sama} @<href>{http://pledgie.com/accounts/@kiwanami, @kiwanami様}
+
 @<icon>{natsutan-sama} @<href>{http://pledgie.com/accounts/@natsutan, @natsutan様}
 
 @<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
