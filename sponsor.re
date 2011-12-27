@@ -27,6 +27,8 @@
 
 @<icon>{sho_hashimoto-sama} @<href>{http://pledgie.com/accounts/@sho_hashimoto, @sho_hashimoto様}
 
+@<icon>{tmoro-sama} @<href>{http://pledgie.com/accounts/@tmoro, @tmoro様}
+
 @<icon>{rane_hs-sama} @<href>{http://pledgie.com/accounts/@rane_hs, @rane_hs様}
 
 @<icon>{ryuone-sama} @<href>{http://pledgie.com/accounts/@ryuone, @ryuone様}
