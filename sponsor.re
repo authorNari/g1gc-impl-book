@@ -23,6 +23,8 @@
 
 @<icon>{sho_hashimoto-sama} @<href>{http://pledgie.com/accounts/@sho_hashimoto, @sho_hashimoto様}
 
+@<icon>{rane_hs-sama} @<href>{http://pledgie.com/accounts/@rane_hs, @rane_hs様}
+
 @<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
 
 @<icon>{ryuone-sama} @<href>{http://pledgie.com/accounts/@ryuone, @ryuone様}
