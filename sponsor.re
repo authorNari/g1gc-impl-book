@@ -76,5 +76,6 @@
 
 @<icon>{tadsaito-sama} @<href>{http://pledgie.com/accounts/tadsaito, Tadashi Saito様}
 
-本書ではスポンサーを募集しています。
-詳細は@<href>{http://www.narihiro.info/g1gc-impl-book/}を参照ください。
+本書は上記の方々から寄付をいただいて執筆されています。
+詳細は@<href>{http://www.narihiro.info/g1gc-impl-book/}を参照ください（@<b>{寄付の受付は終了しています}）。
+
