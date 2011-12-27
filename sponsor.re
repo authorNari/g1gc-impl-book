@@ -25,6 +25,8 @@
 
 @<icon>{tmaeda-sama} @<href>{http://pledgie.com/accounts/@tmaeda, @tmaeda様}
 
+@<icon>{nuna-sama} @<href>{http://pledgie.com/accounts/@nuna, @nuna様}
+
 @<icon>{natsutan-sama} @<href>{http://pledgie.com/accounts/@natsutan, @natsutan様}
 
 @<icon>{sho_hashimoto-sama} @<href>{http://pledgie.com/accounts/@sho_hashimoto, @sho_hashimoto様}
