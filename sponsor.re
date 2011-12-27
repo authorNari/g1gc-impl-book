@@ -2,6 +2,7 @@
 
 本書は下記のスポンサーのみなさまの応援によって執筆されています！！　ありがとうございます！！
 
+@<icon>{yamaz-sama} @<href>{http://pledgie.com/accounts/@yamaz, @yamaz様}
 
 @<icon>{takahashim-sama} @<href>{http://pledgie.com/accounts/@takahashim, @takahashim様}
 
