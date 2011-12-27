@@ -13,6 +13,8 @@
 
 @<icon>{yukihiro_matz-sama} @<href>{http://pledgie.com/accounts/@yukihiro_matz, @yukihiro_matz様}
 
+@<icon>{kakutani-sama} @<href>{http://pledgie.com/accounts/@kakutani, @kakutani様}
+
 @<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
 
 @<icon>{tmpz84-sama} @<href>{http://pledgie.com/accounts/@tmpz84, @tmpz84様}
