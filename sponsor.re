@@ -33,6 +33,8 @@
 
 @<icon>{anonymous-2} Anonymous様
 
+@<icon>{takekazuomi-sama} @<href>{http://pledgie.com/accounts/@takekazuomi, @takekazuomi様}
+
 @<icon>{fujita-sama} @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
