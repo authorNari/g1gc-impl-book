@@ -47,6 +47,8 @@
 
 @<icon>{takekazuomi-sama} @<href>{http://pledgie.com/accounts/@takekazuomi, @takekazuomi様}
 
+@<icon>{ukstudio-sama} @<href>{http://pledgie.com/accounts/ukstudio, Yuki Yuki様}
+
 @<icon>{fujita-sama} @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
