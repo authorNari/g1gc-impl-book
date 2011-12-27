@@ -19,6 +19,8 @@
 
 @<icon>{natsutan-sama} @<href>{http://pledgie.com/accounts/@natsutan, @natsutan様}
 
+@<icon>{sho_hashimoto-sama} @<href>{http://pledgie.com/accounts/@sho_hashimoto, @sho_hashimoto様}
+
 @<icon>{alohakun-sama} @<href>{http://pledgie.com/accounts/@alohakun, @alohakun様}
 
 @<icon>{anonymous-1} Anonymous様
