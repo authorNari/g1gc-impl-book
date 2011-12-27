@@ -55,6 +55,8 @@
 
 @<icon>{inuzini_jiro-sama} @<href>{http://pledgie.com/accounts/@inuzini_jiro, @inuzini_jiro様}
 
+@<icon>{eban-sama} @<href>{http://pledgie.com/accounts/@eban, @eban様}
+
 @<icon>{fujita-sama} @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
