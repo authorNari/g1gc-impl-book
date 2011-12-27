@@ -19,6 +19,8 @@
 
 @<icon>{eitoball-sama} @<href>{http://pledgie.com/accounts/@eitoball, @eitoball様}
 
+@<icon>{tmaeda-sama} @<href>{http://pledgie.com/accounts/@tmaeda, @tmaeda様}
+
 @<icon>{natsutan-sama} @<href>{http://pledgie.com/accounts/@natsutan, @natsutan様}
 
 @<icon>{sho_hashimoto-sama} @<href>{http://pledgie.com/accounts/@sho_hashimoto, @sho_hashimoto様}
