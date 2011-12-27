@@ -63,6 +63,8 @@
 
 @<icon>{cocoatomo-sama} @<href>{http://pledgie.com/accounts/cocoatomo, cocoatomo様}
 
+@<icon>{akasata-sama} @<href>{http://pledgie.com/accounts/@akasata, @akasata様}
+
 @<icon>{fujita-sama} @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
