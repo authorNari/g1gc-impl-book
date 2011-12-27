@@ -37,6 +37,8 @@
 
 @<icon>{littlestarling-sama} @<href>{http://pledgie.com/accounts/@littlestarling, @littlestarling様}
 
+@<icon>{kumagi-sama} @<href>{http://pledgie.com/accounts/@kumagi, @kumagi様}
+
 @<icon>{LuckOfWise-sama} @<href>{http://pledgie.com/accounts/@LuckOfWise, @LuckOfWise様}
 
 @<icon>{anonymous-1} Anonymous様
@@ -56,8 +58,6 @@
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
 
 @<icon>{kenchan-sama} @<href>{http://pledgie.com/accounts/@kenchan, @kenchan様}
-
-@<icon>{kumagi-sama} @<href>{http://pledgie.com/accounts/@kumagi, @kumagi様}
 
 本書ではスポンサーを募集しています。
 詳細は@<href>{http://www.narihiro.info/g1gc-impl-book/}を参照ください。
