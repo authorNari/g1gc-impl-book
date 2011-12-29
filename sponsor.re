@@ -48,6 +48,8 @@
 
 @<icon>{kumagi-sama} @<href>{http://pledgie.com/accounts/@kumagi, @kumagi様}
 
+@<icon>{joenaha-sama} @<href>{http://pledgie.com/accounts/@joenaha, @joenaha様}
+
 @<icon>{LuckOfWise-sama} @<href>{http://pledgie.com/accounts/@LuckOfWise, @LuckOfWise様}
 
 @<icon>{anonymous-1} Anonymous様
