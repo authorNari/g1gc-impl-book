@@ -2,6 +2,36 @@
 
 この章ではHotspotVMのアロケーションについて詳しく説明します。
 
+== 各OS用のインターフェース
+
+HotspotVMは様々なOS上で動作する必要があります。そのため、各OSのAPIを統一のインターフェースを使って扱う便利な機構が用意されています。
+
+//source[share/vm/runtime/os.hpp]{
+80: class os: AllStatic {
+       ...
+223:   static char*  reserve_memory(size_t bytes, char* addr = 0,
+224:                                size_t alignment_hint = 0);
+       ...
+732: };
+//}
+
+@<code>{os}クラスが継承している@<code>{AllStatic}クラスは「静的な情報のみをもつクラス」という意味を持つ特殊なクラスです。
+@<code>{AllStatic}クラスを継承したクラスにはグローバル変数やそのアクセサ、静的（static）なメンバ関数などが定義されます。グローバル変数や関数を1つの名前空間にまとめたいときに、@<code>{AllStatic}クラスを継承します。つまり、@<code>{os}クラスはインスタンスを作成できません。
+
+@<code>{os}クラスに定義されたメンバ関数の実体は各OSに対して用意されています。
+
+ * os/posix/vm/os_posix.cpp
+ * os/linux/vm/os_linux.cpp
+ * os/windows/vm/os_windows.cpp
+ * os/solaris/vm/os_solaris.cpp
+
+上記ファイルはOpenJDKのビルド時に各OSに合う適切なものが選択され、コンパイル・リンクされます。
+@<code>{os/posix/vm/os_posix.cpp}はPOSIX API準拠のOS（LinuxとSorarisの両方）に対してリンクされます。例えばLinux環境では@<code>{os/posix/vm/os_posix.cpp}と@<code>{os/linux/vm/os_linux.cpp}がリンクされます。
+
+そのため、例えば上記の@<code>{share/vm/runtime/os.hpp}で定義されている@<code>{os::reserve_memory()}を呼び出し時には、各OSで別々の@<code>{os::reserve_memory}が実行されます。
+
+@<code>{os:xxx()}というメンバ関数はソースコード上によく登場しますので、よく覚えておいてください。
+
 == アロケーションの流れ
 
 G1GCにおけるオブジェクトのアロケーションをVMヒープの初期化から順を追ってみていきましょう。
