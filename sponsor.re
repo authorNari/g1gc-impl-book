@@ -18,6 +18,8 @@
 
 @<icon>{kakutani-sama} @<href>{http://pledgie.com/accounts/@kakutani, @kakutani様}
 
+@<icon>{mnishikawa-sama} @<href>{http://pledgie.com/accounts/@mnishikawa, @mnishikawa様}
+
 @<icon>{tmpz84-sama} @<href>{http://pledgie.com/accounts/@tmpz84, @tmpz84様}
 
 @<icon>{kiwanami-sama} @<href>{http://pledgie.com/accounts/@kiwanami, @kiwanami様}
