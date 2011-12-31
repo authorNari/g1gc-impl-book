@@ -37,7 +37,7 @@
 
 //comment[TODO BarrierSetの話。]
 
-HotspotVMでは@<code>{oopDesc}クラスやそのサブクラスのインスタンスへのポインタ（@<code>{oopDesc*}）を@<code>{typedef}で別名定義しています。
+HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタンスへのポインタ（@<code>{oopDesc*}）を@<code>{typedef}で別名定義しています。
 
 //source[share/vm/oops/oopsHierarchy.hpp]{
 42: typedef class oopDesc*                            oop;
@@ -86,11 +86,11 @@ HotspotVMでは@<code>{oopDesc}クラスやそのサブクラスのインスタ�
 
 //image[klass_hierarchy][Klassクラスの継承関係]
 
-@<code>{Klass}クラスのサブクラスには、@<code>{oopDesc}のサブクラスと対応するクラスが存在します。
-@<code>{oopDesc}のサブクラスである@<code>{XXDesc}のインスタンスがもつ@<code>{klassOop}内には、@<code>{XXDesc}に対応した@<code>{XXKlass}のインスタンスが格納さているということです。
+@<code>{Klass}クラスの子クラスには、@<code>{oopDesc}の子クラスと対応するクラスが存在します。
+@<code>{oopDesc}の子クラスである@<code>{XXDesc}のインスタンスがもつ@<code>{klassOop}内には、@<code>{XXDesc}に対応した@<code>{XXKlass}のインスタンスが格納さているということです。
 
 前の@<hd>{klassOopDescクラス}の項で@<code>{klassOop}はただの箱だといいました。
-@<code>{klassOop}はオブジェクトとして@<code>{Klass}やそのサブクラスを統一的にあつかうためのインタフェースだといえるでしょう。
+@<code>{klassOop}はオブジェクトとして@<code>{Klass}やその子クラスを統一的にあつかうためのインタフェースだといえるでしょう。
 つまり、外側は@<code>{klassOop}だとしても内部には@<code>{instanceKlass}や@<code>{symbolKlass}等がなどが入っているということです（@<img>{klassOop_box}）。
 
 //image[klassOop_box][klassOopはKlassの箱]
@@ -137,7 +137,7 @@ Javaプログラムを見ると3行目の@<code>{getClass()}メソッドの結�
 その理由はクラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル@<fn>{vtable}へのポインタを付けてしまうからです。
 すべてのオブジェクトに1ワード確保されては困りものです。そのため、@<code>{oopDesc}クラスにはC++の仮想関数を定義できないルールとなっています。
 
-もし、仮想関数を使ってサブクラス毎に違う振る舞いをするメンバ関数を定義したい場合は@<code>{oopDesc}ではなく、対応する@<code>{Klass}の方に仮想関数を定義します。
+もし、仮想関数を使って子クラス毎に違う振る舞いをするメンバ関数を定義したい場合は@<code>{oopDesc}ではなく、対応する@<code>{Klass}の方に仮想関数を定義します。
 
 次にその一部を示します。
 ここでは自分がJava上でどのような意味をもつオブジェクトかを判断する仮想関数が定義されています。
@@ -171,6 +171,6 @@ Javaプログラムを見ると3行目の@<code>{getClass()}メソッドの結�
 
 @<code>{Klass}クラスに仮想関数を定義するため、@<code>{klassOop}には仮想関数テーブルへのポインタが付いてしまいますが、Java上のクラスは全体量が少ないため、それほどメモリを消費しません。
 
-//footnote[virtual_function][仮想関数：サブクラスで再定義可能な関数のこと。C++上の文法でメンバ関数に virtual を付けると仮想関数となる]
+//footnote[virtual_function][仮想関数：子クラスで再定義可能な関数のこと。C++上の文法でメンバ関数に virtual を付けると仮想関数となる]
 //footnote[vtable][仮想関数テーブル：実行時に呼び出すメンバ関数の情報を格納している]
 

@@ -24,6 +24,8 @@ HotspotVMは言語利用者によってGCアルゴリズムが選択されると
 VMヒープの実装を見る前に@<code>{CHeapObj}というクラスについて説明しておきましょう。
 HotspotVM内の多くのクラスはこの@<code>{CHeapObj}クラスを継承しています。
 
+//comment[TODO: 役割が書いていない。Cのヒープ領域から確保されるオブジェクト。]
+
 @<code>{CHeapObj}クラスの特殊な点はオペレータの@<code>{new}と@<code>{delete}を書き換え、C++の通常のアロケーションにデバッグ処理を追加してるところです。
 このデバッグ処理は開発時にのみ使用されます。
 
@@ -45,12 +47,14 @@ HotspotVM内の多くのクラスはこの@<code>{CHeapObj}クラスを継承し
 == CollectedHeapクラス
 
 VMヒープは@<code>{CollectedHeap}という抽象的なクラスで統一的に扱われます。
-@<code>{CollectedHeap}クラスはGCアルゴリズムによってサブクラスに派生し、このサブクラスがVMヒープの実体となります。
+@<code>{CollectedHeap}クラスはGCアルゴリズムによって子クラスに派生し、この子クラスがVMヒープの実体となります。
 また、@<code>{CollectedHeap}クラスは@<code>{CHeapObj}クラスを継承しています。
 
 @<img>{collected_heap_hierarchy}に@<code>{CollectedHeap}クラスの継承関係を示しています。
 
 //image[collected_heap_hierarchy][CollectedHeapクラスの継承関係]
+
+//comment[TODO: 役割が書いていない]
 
 本章ではG1GC用のVMヒープである@<code>{g1CollectedHeap}クラスについてのみ説明します。
 

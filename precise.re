@@ -13,7 +13,7 @@ Javaの変数に格納される型として@<code>{int}、@<code>{float}とい�
 プリミティブ型はJava上では数値として扱われます。
 それと同様にC++（HotpostVM）上でも@<code>{int}や@<code>{float}といった数値として扱われます。
 
-一方、Objectクラス（またはそのサブクラス）のインスタンスを指す「参照型」があります(@<list>{primitive_and_reference_type}の2行目)。
+一方、Objectクラス（またはその子クラス）のインスタンスを指す「参照型」があります(@<list>{primitive_and_reference_type}の2行目)。
 参照型はC++（HotspotVM）上ではオブジェクトへのポインタとして扱われます。
 
 ここで問題となるのが「プリミティブ型はVM上で数値として扱われる」という点です。
