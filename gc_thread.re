@@ -104,6 +104,120 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 === Windowsのスレッド生成
 
+最初にWindows環境でのスレッド生成を見てみましょう。スレッドを生成するメンバ関数は@<code>{os::create_thread()}に定義されています。@<code>{os::create_thread()}内でおこなう処理の概要を以下に示しました。
+
+ 1. @<code>{OSThread}のインスタンスを生成
+ 2. スレッドで使用するマシンスタックのサイズを決定
+ 3. スレッドを生成し、スレッドの情報を格納
+ 4. スレッドの状態を@<code>{INITIALIZED}に変更
+
+では、実際に@<code>{os::create_thread()}の中身を見ていきましょう。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+510: bool os::create_thread(Thread* thread,
+                            ThreadType thr_type,
+                            size_t stack_size) {
+511:   unsigned thread_id;
+512: 
+513:   // 1.OSThreadのインスタンスを生成
+514:   OSThread* osthread = new OSThread(NULL, NULL);
+528:   thread->set_osthread(osthread);
+//}
+
+はじめに@<code>{OSThread}のインスタンスを生成して、引数にとった@<code>{Thread}のインスタンスに格納します。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+       // 2.スレッドで使用するスタックサイズの決定
+530:   if (stack_size == 0) {
+531:     switch (thr_type) {
+532:     case os::java_thread:
+533:       // -Xssフラグで変更可能
+534:       if (JavaThread::stack_size_at_create() > 0)
+535:         stack_size = JavaThread::stack_size_at_create();
+536:       break;
+537:     case os::compiler_thread:
+538:       if (CompilerThreadStackSize > 0) {
+539:         stack_size = (size_t)(CompilerThreadStackSize * K);
+540:         break;
+541:       }
+           // CompilerThreadStackSizeが0ならVMThreadStackSizeを設定する
+543:     case os::vm_thread:
+544:     case os::pgc_thread:
+545:     case os::cgc_thread:
+546:     case os::watcher_thread:
+547:       if (VMThreadStackSize > 0)
+             stack_size = (size_t)(VMThreadStackSize * K);
+548:       break;
+549:     }
+550:   }
+//}
+
+その後、スレッドで使用するマシンスタックのサイズを決定します。
+@<code>{os::create_thread()}の引数にとった、スタックサイズ（@<code>{stack_size}）が@<code>{0}であれば、スレッドの種類（@<code>{thr_type}）に対する適切なサイズを決定します。ここには利用する範囲のスタックサイズを指定することで無駄なメモリ消費を抑えようという狙いがあります。
+
+@<code>{CompilerThreadStackSize}と@<code>{VMThreadStackSize}はOS環境によって決定されますが、@<code>{JavaThread::stack_size_at_create()}についてはJavaの起動オプションによって言語利用者が指定可能です。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+     3. スレッドを生成し、スレッドの情報を格納
+573: #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
+574: #define STACK_SIZE_PARAM_IS_A_RESERVATION  (0x10000)
+575: #endif
+576: 
+577:   HANDLE thread_handle =
+578:     (HANDLE)_beginthreadex(NULL,
+579:       (unsigned)stack_size,
+580:       (unsigned (__stdcall *)(void*)) java_start,
+581:       thread,
+582:       CREATE_SUSPENDED | STACK_SIZE_PARAM_IS_A_RESERVATION,
+583:       &thread_id);
+
+606:   osthread->set_thread_handle(thread_handle);
+607:   osthread->set_thread_id(thread_id);
+//}
+
+次にWindows APIである@<code>{_beginthreadex()}関数を使ってスレッドを生成します。@<code>{_beginthreadex()}関数の引数には以下の情報を渡します。
+
+ 1. スレッドのセキュリティ属性。@<code>{NULL}の場合は何も指定されません。
+ 2. スタックサイズ。@<code>{0}の場合はメインスレッドと同じ値を使用します。
+ 3. スレッド上で処理する関数のアドレス。
+ 4. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
+ 5. スレッドIDを受け取る変数へのポインタ。
+
+加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を指定しています。ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するためにこのフラグが指定されているようです。ソースコード中の文を簡単に以下に翻訳しました。
+
+//quote{
+MSDNのドキュメントとは反対に、_beginthreadex()の"stack_size"はスタックサイズを定義されません。
+その代わりに、最初の確保されたメモリを定義します。
+スタックサイズは実行ファイルのPEヘッダ(*1)によって定義されます。
+もし、"stack_size"がPEヘッダのデフォルト値より大きければ、スタックサイズは最も近い1MBの倍数に切り上げられます。
+例えば、ランチャーのスタックサイズのデフォルト値が320KBだったとして、320KB以下のサイズはスタックサイズに何の影響も与えません。
+この場合は、最初の確保されたメモリサイズにのみ影響があります。
+一方、デフォルト値より大きな"stack_size"を指定した場合は、重大なメモリ使用量の増加を引き起こす可能性があります。
+なぜなら、スタック領域が数MBに切り上げられるだけでなく、その全体の領域が前もって確保されるからです。
+
+最終的にWindows XPはCreateThread()のために"STACK_SIZE_PARAM_IS_A_RESERVATION"を追加しました。
+これは"stack_size"をスタックサイズとして扱うことができます。
+ただ、JVMはCランタイムライブラリを利用するため、CreateThread()をMSDNに従って直接呼ぶことができません。
+
+でも、いいニュースです。このフラグは_beginthredex()でもうまく動くようですよ！！
+
+*1:訳注 PEヘッダとは実行ファイルに定義される実行に必要な設定を格納する場所。
+//}
+
+Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を指定している理由はわかりました。
+
+606・607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+       4. スレッドの状態を@<code>{INITIALIZED}に変更
+610:   osthread->set_state(INITIALIZED);
+
+613:   return true;
+614: }
+//}
+
+最後にスレッドの状態を@<code>{INITIALIZED}に変更して、@<code>{os::create_thread()}の処理は終了です。
+
 === Windowsのスレッド処理開始
 
 === Linuxのスレッド生成
