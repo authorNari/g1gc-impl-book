@@ -102,7 +102,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 @<code>{_state}メンバ変数は各OS共通で定義され、@<code>{ThreadState}の識別子も各OSで同じものが利用されます。
 
-=== Windowsのスレッド生成
+== Windowsのスレッド生成
 
 最初にWindows環境でのスレッド生成を見てみましょう。スレッドを生成するメンバ関数は@<code>{os::create_thread()}に定義されています。@<code>{os::create_thread()}内でおこなう処理の概要を以下に示しました。
 
@@ -153,7 +153,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 //}
 
 その後、スレッドで使用するマシンスタックのサイズを決定します。
-@<code>{os::create_thread()}の引数にとった、スタックサイズ（@<code>{stack_size}）が@<code>{0}であれば、スレッドの種類（@<code>{thr_type}）に対する適切なサイズを決定します。ここには利用する範囲のスタックサイズを指定することで無駄なメモリ消費を抑えようという狙いがあります。
+@<code>{os::create_thread()}の引数にとった、スタックサイズ（@<code>{stack_size}）が@<code>{0}であれば、スレッドの種類（@<code>{thr_type}）に対する適切なサイズを決定します。利用する範囲のスタックサイズを指定し、無駄なメモリ消費を抑えるのがこの処理の狙いです。
 
 @<code>{CompilerThreadStackSize}と@<code>{VMThreadStackSize}はOS環境によって決定されますが、@<code>{JavaThread::stack_size_at_create()}についてはJavaの起動オプションによって言語利用者が指定可能です。
 
@@ -183,10 +183,26 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
  4. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
  5. スレッドIDを受け取る変数へのポインタ。
 
-加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を指定しています。ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するためにこのフラグが指定されているようです。ソースコード中の文を簡単に以下に翻訳しました。
+加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。このフラグの詳細については@<hd>{STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ}にて後述します。
+
+606・607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+       4. スレッドの状態を@<code>{INITIALIZED}に変更
+610:   osthread->set_state(INITIALIZED);
+
+613:   return true;
+614: }
+//}
+
+最後にスレッドの状態を@<code>{INITIALIZED}に変更して、@<code>{os::create_thread()}の処理は終了です。
+
+=== STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ
+
+ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するために@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグが指定されているようです。ソースコード中の文を簡単に以下に翻訳しました。
 
 //quote{
-MSDNのドキュメントとは反対に、_beginthreadex()の"stack_size"はスタックサイズを定義されません。
+MSDNのドキュメントとは反対に、_beginthreadex()の"stack_size"はスタックサイズを定義しません。
 その代わりに、最初の確保されたメモリを定義します。
 スタックサイズは実行ファイルのPEヘッダ(*1)によって定義されます。
 もし、"stack_size"がPEヘッダのデフォルト値より大きければ、スタックサイズは最も近い1MBの倍数に切り上げられます。
@@ -204,21 +220,72 @@ MSDNのドキュメントとは反対に、_beginthreadex()の"stack_size"はス
 *1:訳注 PEヘッダとは実行ファイルに定義される実行に必要な設定を格納する場所。
 //}
 
-Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を指定している理由はわかりました。
+Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthredex()}の引数に指定している理由はわかりました。
 
-606・607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
+== Windowsのスレッド処理開始
 
-//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
-       4. スレッドの状態を@<code>{INITIALIZED}に変更
-610:   osthread->set_state(INITIALIZED);
+@<code>{os::start_thread()}を呼び出してスレッドの処理を開始します。このメンバ関数は各OSで共通のものです。
 
-613:   return true;
-614: }
+//source[share/vm/runtime/os.cpp]{
+695: void os::start_thread(Thread* thread) {
+
+698:   OSThread* osthread = thread->osthread();
+699:   osthread->set_state(RUNNABLE);
+700:   pd_start_thread(thread);
+701: }
 //}
 
-最後にスレッドの状態を@<code>{INITIALIZED}に変更して、@<code>{os::create_thread()}の処理は終了です。
+699行目でスレッドの状態を@<code>{RUNNABLE}に設定し、700行目で@<code>{os::pd_start_thread()}を呼び出します。@<code>{os::pd_start_thread()}は各OSで異なるものが定義されています。
 
-=== Windowsのスレッド処理開始
+//source[os/windows/vm/os_windows.cpp]{
+2975: void os::pd_start_thread(Thread* thread) {
+2976:   DWORD ret = ResumeThread(thread->osthread()->thread_handle());
+
+2982: }
+//}
+
+2976行目でWindows APIの@<code>{ResumeThread()}関数を呼び出し、一時中断していたスレッドを実行します。スレッド上ではじめに起動する関数は、@<code>{_beginthreadex()}の引数に渡していた@<code>{os::java_start()}です。
+
+//source[os/windows/vm/os_windows.cpp]{
+391: static unsigned __stdcall java_start(Thread* thread) {
+
+421:        thread->run();
+
+435:   return 0;
+436: }
+//}
+
+421行目で、@<code>{Thread}クラスを継承した子クラスで定義した、@<code>{run()}が実行されます。
+
+=== キャッシュラインの有効利用
+
+前節では省略しましたが、@<code>{os::java_start()}の最初の方に一見意味不明なコードが登場します。
+
+//source[os/windows/vm/os_windows.cpp]{
+391: static unsigned __stdcall java_start(Thread* thread) {
+397:   static int counter = 0;
+398:   int pid = os::current_process_id();
+399:   _alloca(((pid ^ counter++) & 7) * 128);
+
+421:        thread->run();
+
+435:   return 0;
+436: }
+//}
+
+397〜399行目の処理を簡単に説明します。@<code>{_alloca()}はマシンスタック領域からメモリをアロケーションする関数です。@<code>{_alloca()}に渡される数値は、@<code>{os::java_start()}の呼び出し毎に、@<code>{[0..7]}の範囲で@<code>{1}づつずらした値に、@<code>{128}を掛けたものです。プロセスIDは@<code>{[0..7]}の中でずらしはじめる起点を決定します。もっと簡単に言えば、@<code>{128}の間隔でプロセス・スレッドごとに（重複を含む）ずれた値が@<code>{_alloca()}に渡されます。
+
+この処理はマシンスタックが利用するCPUキャッシュラインの利用箇所を分散する役割があります。
+
+CPUのキャッシュラインとはキャッシュメモリに格納するデータ1単位のことを指します。@<img>{cpu_cache_line}のようにほとんどのキャッシュメモリは数バイトのキャッシュラインで分割されています。CPUは頻繁に使うデータをこのキャッシュライン単位で格納しています。
+
+//image[cpu_cache_line][現在、多くのCPUにはコアに近い側からL1（レベル1）、L2のキャッシュメモリがある。そして、キャッシュメモリはキャッシュラインという単位でデータが格納される。]
+
+問題の処理で懸念しているのは「同じスタックトレースを作るようなスレッドが複数作られた場合、キャッシュラインの利用箇所が偏るかもしれない」ということです。スタックトレースが同じであれば、マシンスタックの各フレームのアドレスの間隔が一致してしまい、スタックフレームが格納されるキャッシュラインが偏る可能性があります。
+
+また、デュアルコアやクアッドコアのCPUではほとんどがL2のキャッシュメモリを共有します。そのため上記の状態に陥ると、スタックにアクセスする際にキャッシュの奪いあいがスレッド間で発生してしまい、スレッドの速度低下につながります。CPUの1プロセッサを2プロセッサに見せかけるハイパースレッディング技術ではL1とL2のキャッシュメモリを共有するため、速度低下はより深刻になります。
+
+そのため、397〜399行目の処理によって、ある程度ずらしたアドレスからマシンスタックをスレッドに作らせることで、キャッシュラインの利用箇所が偏らないようにしています。
 
 === Linuxのスレッド生成
 
