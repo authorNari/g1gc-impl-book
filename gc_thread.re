@@ -180,10 +180,11 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
  1. スレッドのセキュリティ属性。@<code>{NULL}の場合は何も指定されません。
  2. スタックサイズ。@<code>{0}の場合はメインスレッドと同じ値を使用します。
  3. スレッド上で処理する関数のアドレス。
- 4. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
- 5. スレッドIDを受け取る変数へのポインタ。
+ 4. 上記の関数に渡す引数。
+ 5. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
+ 6. スレッドIDを受け取る変数へのポインタ。
 
-加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。このフラグの詳細については@<hd>{STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ}にて後述します。
+加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。このフラグの詳細については@<hd>{Windowsのスレッド生成|STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ}にて後述します。
 
 606・607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
 
@@ -279,7 +280,7 @@ Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_
 
 CPUのキャッシュラインとはキャッシュメモリに格納するデータ1単位のことを指します。@<img>{cpu_cache_line}のようにほとんどのキャッシュメモリは数バイトのキャッシュラインで分割されています。CPUは頻繁に使うデータをこのキャッシュライン単位で格納しています。
 
-//image[cpu_cache_line][現在、多くのCPUにはコアに近い側からL1（レベル1）、L2のキャッシュメモリがある。そして、キャッシュメモリはキャッシュラインという単位でデータが格納される。]
+//image[cpu_cache_line][現在、多くのCPUにはコアに近い側からL1（レベル1）、L2のキャッシュメモリがある。キャッシュメモリはキャッシュラインという単位でデータが格納される。]
 
 問題の処理で懸念しているのは「同じスタックトレースを作るようなスレッドが複数作られた場合、キャッシュラインの利用箇所が偏るかもしれない」ということです。スタックトレースが同じであれば、マシンスタックの各フレームのアドレスの間隔が一致してしまい、スタックフレームが格納されるキャッシュラインが偏る可能性があります。
 
@@ -287,9 +288,86 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 そのため、397〜399行目の処理によって、ある程度ずらしたアドレスからマシンスタックをスレッドに作らせることで、キャッシュラインの利用箇所が偏らないようにしています。
 
-=== Linuxのスレッド生成
+== Linuxのスレッド生成
 
-=== Linuxのスレッド処理開始
+次にLinux環境でのスレッド生成を見てみましょう。@<hd>{Windowsのスレッド処理開始}にて紹介した内容と重複するものは省略します。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+866: bool os::create_thread(Thread* thread,
+                            ThreadType thr_type,
+                            size_t stack_size) {
+
+870:   OSThread* osthread = new OSThread(NULL, NULL);
+
+876:   osthread->set_thread_type(thr_type);
+877: 
+       // 最初の状態はALLOCATED
+879:   osthread->set_state(ALLOCATED);
+880: 
+881:   thread->set_osthread(osthread);
+882: 
+       // スレッドの属性初期化
+884:   pthread_attr_t attr;
+885:   pthread_attr_init(&attr);
+886:   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+       // 省略: スレッドで使用するスタックサイズの決定
+
+922:   // glibc guard page
+923:   pthread_attr_setguardsize(&attr, os::Linux::default_guard_size(thr_type));
+924: 
+//}
+
+870〜881行目で@<code>{osthread}を初期化します。Windows版と異なるのは、@<code>{set_state()}で@<code>{ALLOCATED}を設定している点です。
+
+884、885行目でスレッドの属性を初期化します。@<code>{pthread_attr_t}はpthreadの属性を格納する構造体です。885行目の@<code>{pthread_attr_init()}関数で@<code>{attr}変数をPthreadsが定めるデフォルト値に初期化します。
+
+886行目の@<code>{pthread_attr_setdetachstate()}でスレッド属性のデタッチ状態を設定します。@<code>{PTHREAD_CREATE_DETACHED}フラグを設定すると、スレッドはデタッチ状態で生成されます。デタッチ状態のスレッドは、スレッドの処理が終了したときに自動でスレッド自身のリソースが解放されます。ただし、デタッチ状態のスレッドはメインスレッドから切り離された状態で処理を実行しますので、デタッチ状態のスレッドとは合流（join）できません。
+
+923行目では@<code>{pthread_attr_setguardsize()}でスタックのガード領域サイズを指定しています。この点については後の@<hd>{Linuxのスレッド生成|ガード領域をなくして省メモリ化}で詳しく取り上げます。
+
+//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+925:   ThreadState state;
+926: 
+927:   {
+
+934:     pthread_t tid;
+935:     int ret = pthread_create(&tid, &attr,
+                                  (void* (*)(void*)) java_start,
+                                  thread);
+936: 
+937:     pthread_attr_destroy(&attr);
+
+         // pthread 情報を OSThread に格納
+951:     osthread->set_pthread_id(tid);
+952: 
+         // 子スレッドが初期化 or 異常終了するまで待つ
+954:     {
+955:       Monitor* sync_with_child = osthread->startThread_lock();
+956:       MutexLockerEx ml(sync_with_child, Mutex::_no_safepoint_check_flag);
+957:       while ((state = osthread->get_state()) == ALLOCATED) {
+958:         sync_with_child->wait(Mutex::_no_safepoint_check_flag);
+959:       }
+960:     }
+
+965:   }
+
+977:   return true;
+978: }
+//}
+
+935行目の@<code>{pthread_create()}を使ってスレッドを生成します。引数には以下の情報を渡します。
+
+ 1. スレッドIDを受け取る変数へのポインタ。
+ 2. スタックの属性。今まで育ててきた@<code>{attr}へのポインタを指定する。
+ 3. スレッド上で処理する関数のアドレス。
+ 4. 上記の関数に渡す引数。
+
+954〜960行目で作成したスレッドが初期化されるのを待ちます。957行目の@<code>{while}ループでは、スレッドの状態が@<code>{ALLOCATED}以外に書き換えられると@<code>{while}ループを抜けます。スレッドの状態は@<code>{java_start()}の中で書き換えられます。つまり、作成したスレッドの準備が整い、スレッドの処理が実際に実行された時に@<code>{while}ループを抜けます。958行目の@<code>{wait()}はスレッドを待たせる処理です。@<code>{wait()}の詳細についてはまた後述します。
+
+=== ガード領域をなくして省メモリ化
+
+== Linuxのスレッド処理開始
 
 == TODO 排他制御
 * Park
