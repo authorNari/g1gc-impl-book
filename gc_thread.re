@@ -292,7 +292,7 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 次にLinux環境でのスレッド生成を見てみましょう。@<hd>{Windowsのスレッド処理開始}にて紹介した内容と重複するものは省略します。
 
-//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+//source[os/linux/vm/os_linux.cpp:os::create_thread()]{
 866: bool os::create_thread(Thread* thread,
                             ThreadType thr_type,
                             size_t stack_size) {
@@ -313,7 +313,6 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
        // 省略: スレッドで使用するスタックサイズの決定
 
-922:   // glibc guard page
 923:   pthread_attr_setguardsize(&attr, os::Linux::default_guard_size(thr_type));
 924: 
 //}
@@ -324,9 +323,9 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 886行目の@<code>{pthread_attr_setdetachstate()}でスレッド属性のデタッチ状態を設定します。@<code>{PTHREAD_CREATE_DETACHED}フラグを設定すると、スレッドはデタッチ状態で生成されます。デタッチ状態のスレッドは、スレッドの処理が終了したときに自動でスレッド自身のリソースが解放されます。ただし、デタッチ状態のスレッドはメインスレッドから切り離された状態で処理を実行しますので、デタッチ状態のスレッドとは合流（join）できません。
 
-923行目では@<code>{pthread_attr_setguardsize()}でスタックのガード領域サイズを指定しています。この点については後の@<hd>{Linuxのスレッド生成|ガード領域をなくして省メモリ化}で詳しく取り上げます。
+923行目では@<code>{pthread_attr_setguardsize()}でスタックのガード領域サイズを指定しています。この点については後の@<hd>{Linuxのスレッド生成|スタックのガード領域}で詳しく取り上げます。
 
-//source[os/windows/vm/os_windows.cpp:os::create_thread()]{
+//source[os/linux/vm/os_linux.cpp:os::create_thread()]{
 925:   ThreadState state;
 926: 
 927:   {
@@ -365,7 +364,35 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 954〜960行目で作成したスレッドが初期化されるのを待ちます。957行目の@<code>{while}ループでは、スレッドの状態が@<code>{ALLOCATED}以外に書き換えられると@<code>{while}ループを抜けます。スレッドの状態は@<code>{java_start()}の中で書き換えられます。つまり、作成したスレッドの準備が整い、スレッドの処理が実際に実行された時に@<code>{while}ループを抜けます。958行目の@<code>{wait()}はスレッドを待たせる処理です。@<code>{wait()}の詳細についてはまた後述します。
 
-=== ガード領域をなくして省メモリ化
+=== スタックのガード領域
+
+@<code>{os::create_thread()}では次のように、スタックのガード領域のサイズが指定されます。
+
+//source[os/linux/vm/os_linux.cpp:os::create_thread():再掲]{
+923:   pthread_attr_setguardsize(&attr, os::Linux::default_guard_size(thr_type));
+//}
+
+スタックのガード領域とは、スタックのオーバーフローを防ぐ（ガードする）ための緩衝域として用意されるものです。
+@<img>{guard_page}のように、Linux環境ではマシンスタックの上限のすぐ上に余分にガード領域を設けおり、もしスタックが溢れてガード領域にアクセスした場合には@<code>{SEGV}のシグナルが発生します。
+
+//image[guard_page][スタックには、マシンスタックとして使える領域の底の直後にガード領域があり、OSのガード領域にメモリアクセスがあるとスタックオーバーフローとなる。]
+
+ガード領域のサイズとして@<code>{os::Linux::default_guard_size()}が指定されています。この関数の定義は次のとおりです。
+
+//source[os_cpu/linux_x86/vm/os_linux_x86.cpp]{
+662: size_t os::Linux::default_guard_size(os::ThreadType thr_type) {
+665:   return (thr_type == java_thread ? 0 : page_size());
+666: }
+//}
+
+Javaスレッド以外は1ページ分のサイズ、Javaスレッドの場合は@<code>{0}のサイズが返されます。
+つまり、Javaスレッドの場合はガード領域が作成されません。
+これはなぜでしょうか？
+
+@<img>{java_thread_guard_page}に示す通り、実はJavaスレッドは独自のガード領域を別に準備しており、スタックオーバーフローエラーのハンドリングや事後処理などを自前で実装しています。
+そのため、JavaスレッドではOSが用意するガード領域に意味がなく、確保されるメモリ領域がもったいないため、@<code>{pthread_attr_setguardsize()}にて@<code>{0}が指定されます。
+
+//image[java_thread_guard_page][Javaスレッドはマシンスタックとして使える領域の底の直前を独自のガード領域として利用している。]
 
 == Linuxのスレッド処理開始
 
