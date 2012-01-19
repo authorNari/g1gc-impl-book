@@ -245,7 +245,7 @@ Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_
 2982: }
 //}
 
-2976行目でWindows APIの@<code>{ResumeThread()}関数を呼び出し、一時中断していたスレッドを実行します。スレッド上ではじめに起動する関数は、@<code>{_beginthreadex()}の引数に渡していた@<code>{os::java_start()}です。
+2976行目でWindows APIの@<code>{ResumeThread()}関数を呼び出し、一時中断していたスレッドを実行します。スレッド上ではじめに起動する関数は、@<code>{_beginthreadex()}の引数に渡していた@<code>{java_start()}です。
 
 //source[os/windows/vm/os_windows.cpp]{
 391: static unsigned __stdcall java_start(Thread* thread) {
@@ -260,7 +260,7 @@ Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_
 
 === キャッシュラインの有効利用
 
-前節では省略しましたが、@<code>{os::java_start()}の最初の方に一見意味不明なコードが登場します。
+前節では省略しましたが、@<code>{java_start()}の最初の方に一見意味不明なコードが登場します。
 
 //source[os/windows/vm/os_windows.cpp]{
 391: static unsigned __stdcall java_start(Thread* thread) {
@@ -274,7 +274,7 @@ Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_
 436: }
 //}
 
-397〜399行目の処理を簡単に説明します。@<code>{_alloca()}はマシンスタック領域からメモリをアロケーションする関数です。@<code>{_alloca()}に渡される数値は、@<code>{os::java_start()}の呼び出し毎に、@<code>{[0..7]}の範囲で@<code>{1}づつずらした値に、@<code>{128}を掛けたものです。プロセスIDは@<code>{[0..7]}の中でずらしはじめる起点を決定します。もっと簡単に言えば、@<code>{128}の間隔でプロセス・スレッドごとに（重複を含む）ずれた値が@<code>{_alloca()}に渡されます。
+397〜399行目の処理を簡単に説明します。@<code>{_alloca()}はマシンスタック領域からメモリをアロケーションする関数です。@<code>{_alloca()}に渡される数値は、@<code>{java_start()}の呼び出し毎に、@<code>{[0..7]}の範囲で@<code>{1}づつずらした値に、@<code>{128}を掛けたものです。プロセスIDは@<code>{[0..7]}の中でずらしはじめる起点を決定します。もっと簡単に言えば、@<code>{128}の間隔でプロセス・スレッドごとに（重複を含む）ずれた値が@<code>{_alloca()}に渡されます。
 
 この処理はマシンスタックが利用するCPUキャッシュラインの利用箇所を分散する役割があります。
 
@@ -290,7 +290,7 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 == Linuxのスレッド生成
 
-次にLinux環境でのスレッド生成を見てみましょう。@<hd>{Windowsのスレッド処理開始}にて紹介した内容と重複するものは省略します。
+次にLinux環境でのスレッド生成を見てみましょう。@<hd>{Windowsのスレッド生成}にて紹介した内容と重複するものは省略します。
 
 //source[os/linux/vm/os_linux.cpp:os::create_thread()]{
 866: bool os::create_thread(Thread* thread,
@@ -395,6 +395,66 @@ Javaスレッド以外は1ページ分のサイズ、Javaスレッドの場合�
 //image[java_thread_guard_page][Javaスレッドはマシンスタックとして使える領域の底の直前を独自のガード領域として利用している。]
 
 == Linuxのスレッド処理開始
+
+Linux環境では一時停止状態でスレッド生成できないため、@<code>{java_start()}がすぐに実行されてしまいます。
+
+//source[os/linux/vm/os_linux.cpp]{
+807: static void *java_start(Thread *thread) {
+
+        /* キャッシュラインをずらす処理 */
+
+819:   OSThread* osthread = thread->osthread();
+820:   Monitor* sync = osthread->startThread_lock();
+
+       // 親スレッドとのハンドシェイク
+847:   {
+848:     MutexLockerEx ml(sync, Mutex::_no_safepoint_check_flag);
+849: 
+         // 待っている親スレッドを起こす
+851:     osthread->set_state(INITIALIZED);
+852:     sync->notify_all();
+
+         // os::start_thread() の呼び出しを待つ
+855:     while (osthread->get_state() == INITIALIZED) {
+856:       sync->wait(Mutex::_no_safepoint_check_flag);
+857:     }
+858:   }
+
+861:   thread->run();
+862: 
+863:   return 0;
+864: }
+//}
+
+848〜852行目で待っている親スレッドに対して、初期化が終わったことを通知します。
+子スレッドはその後すぐに、855、856行目で@<code>{os::start_thread()}の呼び出し待ちに入ります。
+
+@<code>{os::start_thread()}はWindowsと共通の関数でした。もう一度見てみましょう。
+
+//source[share/vm/runtime/os.cpp:再掲]{
+695: void os::start_thread(Thread* thread) {
+
+698:   OSThread* osthread = thread->osthread();
+699:   osthread->set_state(RUNNABLE);
+700:   pd_start_thread(thread);
+701: }
+//}
+
+699行目でスレッドの状態を@<code>{RUNNABLE}に変更しています。これで子スレッドはwhileループを抜けることができます。
+待ちの状態の子スレッドを起こしているのが、@<code>{pd_start_thread()}の処理です。
+
+//source[os/linux/vm/os_linux.cpp]{
+1047: void os::pd_start_thread(Thread* thread) {
+1048:   OSThread * osthread = thread->osthread();
+
+1050:   Monitor* sync_with_child = osthread->startThread_lock();
+1051:   MutexLockerEx ml(sync_with_child, Mutex::_no_safepoint_check_flag);
+1052:   sync_with_child->notify();
+1053: }
+//}
+
+1052行目で子スレッドを起こします。
+子スレッドは待ちを抜けた後、@<code>{run()}を呼び出し、ユーザが定義したスレッドの処理を開始します。
 
 == TODO 排他制御
 * Park
