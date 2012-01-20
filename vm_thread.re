@@ -1,11 +1,19 @@
-= GCスレッド
+= HotspotVMのスレッド管理
 
 『アルゴリズム編』で述べたとおり、G1GCは並列・並行GCを組み合わせたGCです。
-本章ではHotspotVMが実装しているスレッドの概要と、GCによるスレッドの利用方法を解説します。
+並列・並行GCはそれぞれスレッドを利用して実装されています。
+GCとスレッドの関係を見ていく前に、本章でHotspotVMのスレッド管理について基礎の部分を学んでおきましょう。
+
+== スレッド操作の抽象化
+
+WindowsやLinuxにはそれぞれOSのスレッドを利用するライブラリが存在します。
+WindowsではWindows APIを使ってスレッドを操作し、LinuxではPOSIXスレッド標準を実装したライブラリであるPthreadsを利用します。
+
+HotspotVM内には、OSよって異なるスレッド操作を共通化する層を設けており、HotspotVM内でスレッドが簡単に利用できるように工夫されています。
 
 == Threadクラス
 
-HotspotVM内ではスレッドを扱うための基本的な機能を@<code>{Thread}クラスに実装し、@<code>{Thread}クラスを継承した子クラスによって実際にスレッドを生成・管理します。
+HotspotVM内ではスレッドを操作する基本的な機能を@<code>{Thread}クラスによって実装し、@<code>{Thread}クラスを継承した子クラスにの実装によってスレッドの振る舞いを決定します。
 @<img>{thread_hierarchy}に@<code>{Thread}クラスの継承関係を示します。
 
 //image[thread_hierarchy][Threadクラスの継承関係]
@@ -32,7 +40,8 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 == スレッドのライフサイクル
 
-スレッドのライフサイクルは以下の通りです。
+では、実際にスレッドが生成されて、処理が開始し、終了するまでを順を追ってみていきましょう。
+以下がひとつのスレッドのライフサイクルです。
 
  1. @<code>{Thread}クラスのインスタンス生成
  2. スレッド生成
@@ -104,7 +113,10 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 == Windowsのスレッド生成
 
-最初にWindows環境でのスレッド生成を見てみましょう。スレッドを生成するメンバ関数は@<code>{os::create_thread()}に定義されています。@<code>{os::create_thread()}内でおこなう処理の概要を以下に示しました。
+この節からは各OSでどのようにスレッドを扱っているのかを見ていきます。
+最初はWindows環境でのスレッド生成です。
+
+スレッドを生成するメンバ関数は@<code>{os::create_thread()}に定義されています。@<code>{os::create_thread()}内でおこなう処理の概要を以下に示しました。
 
  1. @<code>{OSThread}のインスタンスを生成
  2. スレッドで使用するマシンスタックのサイズを決定
@@ -186,7 +198,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。このフラグの詳細については@<hd>{Windowsのスレッド生成|STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ}にて後述します。
 
-606・607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
+606、607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
 
 //source[os/windows/vm/os_windows.cpp:os::create_thread()]{
        4. スレッドの状態を@<code>{INITIALIZED}に変更
@@ -290,7 +302,8 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
 
 == Linuxのスレッド生成
 
-次にLinux環境でのスレッド生成を見てみましょう。@<hd>{Windowsのスレッド生成}にて紹介した内容と重複するものは省略します。
+次にLinux環境でのスレッド生成を見てみましょう。
+@<hd>{Windowsのスレッド生成}にて紹介した内容と重複するものは省略します。
 
 //source[os/linux/vm/os_linux.cpp:os::create_thread()]{
 866: bool os::create_thread(Thread* thread,
@@ -455,12 +468,3 @@ Linux環境では一時停止状態でスレッド生成できないため、@<c
 
 1052行目で子スレッドを起こします。
 子スレッドは待ちを抜けた後、@<code>{run()}を呼び出し、ユーザが定義したスレッドの処理を開始します。
-
-== TODO 排他制御
-* Park
-* Monitor
-* Mutex
-
-== TODO GC並列スレッド
-
-== TODO GC並行スレッド
