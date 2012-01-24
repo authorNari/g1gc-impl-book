@@ -3,3 +3,4 @@ alloc.re
 heap.re
 object.re
 precise.re
+vm_thread.re

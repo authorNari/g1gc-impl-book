@@ -13,6 +13,7 @@
  * 3.[ヒープ構造](http://www.narihiro.info/g1gc-impl-book/heap.html)
  * 4.[オブジェクト構造](http://www.narihiro.info/g1gc-impl-book/object.html)
  * 5.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
+ * 6.[HotspotVMのスレッド管理](http://www.narihiro.info/g1gc-impl-book/vm_thread.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
 以下から（ある時点で）最新のebookをダウンロードできます。
