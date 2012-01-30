@@ -97,6 +97,81 @@ Javaのモニタだと張り紙がないので、いったん待合室の全員�
 
 == モニタの実装概要
 
+ここで気になるのはモニタの実装方法です。
+ただ、この話題はGCの話から脱線しすぎる予感がしますので、実装の重要な部分をかいつまんで説明します。
+また、ここで取り上げる実装方法はHotspotVMの例です。
+モニタ実装の一例として捉えてください。
+
+=== スレッドの一時停止・再起動
+
+まず、行列や待合室での一時停止・再起動処理を見てみましょう。
+それぞれの処理は以下のメンバ関数で実装されています。
+
+ * @<code>{os::PlatformEvent::park()} - 待つ
+ * @<code>{os::PlatformEvent::unpark()} - 再起動
+
+parkは「駐車する」、unparkは「発車する」という意味があります。
+それぞれのメンバ関数はそれぞれのOS用に実装されていますが、今回はLinuxのものを簡単に見ていきます。
+
+@<code>{park()}では次のように@<code>{pthread_cond_wait()}を利用して待つ処理を実現しています。
+
+//source[os/linux/vm/os_linux.cpp]{
+4916: void os::PlatformEvent::park() {
+
+4928:      int status = pthread_mutex_lock(_mutex);
+
+4933:         status = pthread_cond_wait(_cond, _mutex);
+
+4948: }
+//}
+
+@<code>{os::PlatformEvent}のインスタンスは@<code>{_cond}と@<code>{_mutex}のメンバ変数を保持しています。
+@<code>{_cond}は条件変数、@<code>{_mutex}はミューテックスであり、それぞれPthreadsで利用される変数です。
+4916行目で@<code>{pthread_mutex_lock()}を使って、@<code>{_mutex}をロックします。
+その後、4933行目で@<code>{pthread_cond_wait()}を使って、現在のスレッドを一時停止状態にします。
+@<code>{pthread_cond_wait()}には@<code>{_cond}と、ロック状態の@<code>{_mutex}を指定します。
+@<code>{_mutex}は@<code>{pthread_cond_wait()}内部で一時停止状態になった際にアンロックされます。
+
+@<code>{unpark()}は次のように@<code>{pthread_cond_signal()}を利用してスレッドを再起動します。
+
+//source[os/linux/vm/os_linux.cpp]{
+5011: void os::PlatformEvent::unpark() {
+
+5028:      int status = pthread_mutex_lock(_mutex);
+
+5034:         pthread_cond_signal (_cond);
+
+5049: }
+//}
+
+5034行目で登場する@<code>{pthread_cond_signal()}では引数に取った条件変数で待っている1つのスレッドに対してシグナルを送り、再起動します。
+ここでは@<code>{os::PlatformEvent}インスタンスの@<code>{_cond}変数で待っているスレッドに対してシグナルを送ります。
+
+Windowsでは@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を使ってほぼ同じことができます。
+
+さて、実は@<code>{Thread}クラスは@<code>{os::PlatformEvent}クラスを継承した@<code>{ParkEvent}クラスのインスタンスをメンバ変数として保持しています。
+
+//source[share/vm/runtime/thread.hpp]{
+94: class Thread: public ThreadShadow {
+
+       // 内部のMutex/Monitorに利用される
+582:   ParkEvent * _MutexEvent ;                    
+
+//}
+
+つまり、@<img>{thread_park_unpark}のように、HotspotVMが管理する1スレッド（@<code>{Thread}インスタンス）の@<code>{_MutexEvent}に対して、@<code>{park()}・@<code>{unpark()}を呼び、対象のスレッドの一時停止・再起動をコントロールします。
+
+//image[thread_park_unpark][1スレッドに対してpark()を呼ぶとスレッドは一時停止する。一時停止中はCPUを無駄に利用しない。unpark()を呼ぶとスレッドは再起動する。]
+
+=== モニタのロック・アンロック
+
+行列がなければすぐに入れる。
+行列があれば_OnDeckに入るのを競う。<- ウェイト・アンロックの時に決定する。
+
+=== wait
+
+=== notify
+
 == Monitorクラス
 
 == MutexLockerクラス
