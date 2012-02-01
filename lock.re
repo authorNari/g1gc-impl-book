@@ -147,9 +147,9 @@ parkは「駐車する」、unparkは「発車する」という意味があり�
 5034行目で登場する@<code>{pthread_cond_signal()}では引数に取った条件変数で待っている1つのスレッドに対してシグナルを送り、再起動します。
 ここでは@<code>{os::PlatformEvent}インスタンスの@<code>{_cond}変数で待っているスレッドに対してシグナルを送ります。
 
-Windowsでは@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を使ってほぼ同じことができます。
+また、Windowsでは@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を使ってほぼ同じことができます。
 
-さて、実は@<code>{Thread}クラスは@<code>{os::PlatformEvent}クラスを継承した@<code>{ParkEvent}クラスのインスタンスをメンバ変数として保持しています。
+@<code>{Thread}クラスは@<code>{os::PlatformEvent}クラスを継承した@<code>{ParkEvent}クラスのインスタンスをメンバ変数として保持しています。
 
 //source[share/vm/runtime/thread.hpp]{
 94: class Thread: public ThreadShadow {
@@ -159,14 +159,31 @@ Windowsでは@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を使ってほ
 
 //}
 
-つまり、@<img>{thread_park_unpark}のように、HotspotVMが管理する1スレッド（@<code>{Thread}インスタンス）の@<code>{_MutexEvent}に対して、@<code>{park()}・@<code>{unpark()}を呼び、対象のスレッドの一時停止・再起動をコントロールします。
+そのため、@<img>{thread_park_unpark}のように、HotspotVMが管理する1スレッド（@<code>{Thread}インスタンス）の@<code>{_MutexEvent}に対して、@<code>{park()}・@<code>{unpark()}を呼ぶことで、対象のスレッドを一時停止・再起動できます。
+モニタで説明した「待合室で待つ」「待合室から出る」「行列を作って待つ」などはこの@<code>{park()}・@<code>{unpark()}を利用して実装されます。
 
 //image[thread_park_unpark][1スレッドに対してpark()を呼ぶとスレッドは一時停止する。一時停止中はCPUを無駄に利用しない。unpark()を呼ぶとスレッドは再起動する。]
 
 === モニタのロック・アンロック
 
-行列がなければすぐに入れる。
-行列があれば_OnDeckに入るのを競う。<- ウェイト・アンロックの時に決定する。
+次にモニタのロック・アンロックについて見ていきましょう。
+この部分は実装が複雑なので概要だけを紹介します。
+
+モニタの状態の一例を@<img>{monitor_lock_unlock_1}に図示しました。
+このモニタでは行列（@<code>{EntryList}）にスレッドB,Cが並んで待っています。
+モニタの前には小さな前室（@<code>{OnDeck}）があります。
+そして、モニタ内のロックはスレッドAが現在は保持しています。
+
+//image[monitor_lock_unlock_1][モニタの状態の一例。モニタはロックされているため、EntryListのスレッドBはロックを取ることができない。]
+
+スレッドAのアンロック後、次の手順でスレッドBはモニタのロックを取得します。
+
+ 1. モニタをアンロックしたスレッドAが@<code>{EntryList}の先頭を@<code>{OnDeck}に格納
+ 2. スレッドAは@<code>{OnDeck}のスレッドBを起こす
+ 3. スレッドBは@<code>{OnDeck}に自分がいるのを確認
+ 4. スレッドBがモニタに入り、ロックする
+
+また、スレッドAが待合室に入った場合（wait）でも、上記と同じ手順になります。
 
 === wait
 

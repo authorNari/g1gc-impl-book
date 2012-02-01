@@ -81,7 +81,7 @@ common-case paths:
      Threads on the cxq eventually drain into the EntryList.
   -- Invariant: a thread appears on at most one list -- cxq, EntryList
      or WaitSet -- at any one time.
-最大でも一つのリストに現れる
+cxqとEntryListもしくはWaitSetの最大でも一つのリストに現れる。
 
   -- For a given monitor there can be at most one "OnDeck" thread at any
      given time but if need be this particular invariant could be relaxed.
