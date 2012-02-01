@@ -147,7 +147,7 @@ parkは「駐車する」、unparkは「発車する」という意味があり�
 5034行目で登場する@<code>{pthread_cond_signal()}では引数に取った条件変数で待っている1つのスレッドに対してシグナルを送り、再起動します。
 ここでは@<code>{os::PlatformEvent}インスタンスの@<code>{_cond}変数で待っているスレッドに対してシグナルを送ります。
 
-また、Windowsでは@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を使ってほぼ同じことができます。
+ちなみに、Windowsでは上記とほぼ同じ事を@<code>{WaitForSingleObject()}、@<code>{SetEvent()}を利用して実装しています。
 
 @<code>{Thread}クラスは@<code>{os::PlatformEvent}クラスを継承した@<code>{ParkEvent}クラスのインスタンスをメンバ変数として保持しています。
 
