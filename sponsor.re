@@ -74,6 +74,8 @@
 
 @<icon>{akasata-sama} @<href>{http://pledgie.com/accounts/@akasata, @akasata様}
 
+@<icon>{hideaki-t-sama} @<href>{http://pledgie.com/accounts/hideaki-t, Hideaki Takahashi様}
+
 @<icon>{fujita-sama} @<href>{http://pledgie.com/accounts/objectx, Masashi Fujita様}
 
 @<icon>{takano32-sama} @<href>{http://pledgie.com/accounts/@takano32, @takano32様}
