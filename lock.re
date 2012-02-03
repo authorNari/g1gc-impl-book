@@ -167,7 +167,7 @@ parkは「駐車する」、unparkは「発車する」という意味があり�
 === モニタのロック・アンロック
 
 次にモニタのロック・アンロックについて見ていきましょう。
-この部分は実装が複雑なので概要だけを紹介します。
+ここからは実装が複雑なので概要だけを紹介します。
 
 モニタの状態の一例を@<img>{monitor_lock_unlock_1}に図示しました。
 このモニタでは行列（@<code>{EntryList}）にスレッドB,Cが並んで待っています。
@@ -187,7 +187,33 @@ parkは「駐車する」、unparkは「発車する」という意味があり�
 
 === スレッドのWait・Notify・NotifyAll
 
-=== notify
+モニタ内のスレッドがwaitする場合もモニタをアンロックすることになります。
+ですので、基本的には前節のモニタのアンロックの処理と同じになります。
+ただし、Waitでは@<code>{park()}を使ってスレッドが待つ処理が必要になります。
+
+@<img>{monitor_wait_notify_1}に複数のスレッドが待合室（@<code>{WaitSet}）で待っている図を示しました。
+@<code>{EntryList}にスレッドが並んでおらず、モニタのロックはスレッドAが握っています。
+
+//image[monitor_wait_notify_1][スレッドB,CがWaitSetでpark()された状態になっている。スレッドAはモニタのロックを保持。EntryListは空。]
+
+次にスレッドAがモニタ内でNotifyAllをおこなったとします。
+NotifyAllでは、@<code>{WaitSet}内のスレッドを@<code>{WaitSet}から取り出し、@<code>{unpark()}を呼び出します。
+@<code>{WaitSet}にいたスレッドは外に出た後でほぼ同時に動き出します。
+その後、@<img>{monitor_wait_notify_2}のように、お互いに競争しながら1つキューを作ります。
+これを@<code>{ContentionQueue}と呼びます。
+キューを作ったあとはスレッド自身が@<code>{park()}を呼び出し、一時停止状態に入ります。
+
+//image[monitor_wait_notify_2][WaitSetから出たスレッドB,Cは競争し合いながら1つのキューを作る。この際の並び順は競争に勝った順にならんでいく]
+
+最後にスレッドAがモニタをアンロックします。
+その際、スレッドAは@<code>{EntryList}の先頭を@<code>{OnDeck}に格納しようと思いますが、@<code>{EntryList}は空であるため、@<code>{ContentionQueue}を@<code>{EntryList}に昇格します。
+その後、@<code>{EntryList}の先頭を@<code>{OnDeck}に格納し、@<code>{unpark()}を呼び出します。
+以降の処理は以前説明したアンロックの処理と同じです。
+
+//image[monitor_wait_notify_3][モニタをアンロックするスレッドAはContentionQueueをEntryListに昇格し、先頭をOnDeckに格納する]
+
+NotifyAllの場合を見てきました。
+Notifyでは呼び出されるのが全スレッドか、@<code>{WaitSet}の1スレッドであるかの違いしかありません。処理の流れは同じです。
 
 == Monitorクラス
 
