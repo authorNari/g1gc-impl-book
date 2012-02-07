@@ -219,4 +219,87 @@ Notifyでは呼び出されるのが全スレッドか、@<code>{WaitSet}の1ス
 
 == Monitorクラス
 
-== MutexLockerクラス
+HotspotVMには@<code>{Monitor}というクラスが実装されており、VM内部で利用するスレッドはこのクラスを利用して排他制御します。
+
+@<code>{Monitor}クラスには以下のようにメンバ関数が定義されています。
+//source[share/vm/runtime/mutex.hpp]{
+87: class Monitor : public CHeapObj {
+
+177:  public:
+185:   bool wait(bool no_safepoint_check = !_no_safepoint_check_flag,
+186:             long timeout = 0,
+187:             bool as_suspend_equivalent = !_as_suspend_equivalent_flag);
+188:   bool notify();
+189:   bool notify_all();
+
+193:   void lock(Thread *thread);
+194:   void unlock();
+//}
+
+この@<code>{Monitor}クラスの1インスタンスが例として取り上げたレンタルショップのモニタに相当します。
+たとえば、10個@<code>{Monitor}のインスタンスを作れば、10個のレンタルショップのモニタが作られたことになります。
+そして、それぞれの店はそれぞれの共有リソースを管理します。
+また、客（スレッド）はモニタのしきたりに則って、どの店にも入店することができます。
+
+実際にコードを見てみないとイメージをつかめないと思いますので、以下に@<code>{Monitor}クラスのサンプルコードを示しました。
+
+//emlistnum{
+// new Monitor(Mutex::safepoint, "Test Monitor"); で初期化される
+Monitor* shop_monitor;
+// レンタルショップを表すグローバル変数
+RentalShop* rental_shop;
+
+class Client {
+  Board* _snowboard;
+
+  // ...
+}
+//}
+
+2行目には@<code>{Monitor}インスタンスへのポインタを保持するグローバル変数の@<code>{shop_monitor}を定義します。
+4行目にはレンタルショップを表す@<code>{rental_shop}グローバル変数を定義します。
+これらのグローバル変数はどこか別の関数で初期化されると想定します。
+
+6行目に@<code>{Client}クラスを定義します。
+@<code>{Client}クラスはレンタルショップを訪問する客を表現しており、@<code>{shop_monitor}はレンタルショップのモニタを表現しています。
+@<code>{Client}は@<code>{_snowboard}メンバ変数を持っており、ここに借りたボードを格納します。
+
+次に、ボードをレンタルするメンバ関数を@<code>{Client}クラスの@<code>{rent()}として定義します。
+
+//emlistnum{
+  void rent() {
+    // ロック
+    shop_monitor.lock();
+    // ボードがある状態になるまで待つ
+    while (rental_shop.snowboards.empty()) {
+      shop_monitor.wait();
+    }
+    // 借りる
+    _snowboard = rental_shop.snowboards.pop();
+    shop_monitor.unlock();
+  }
+//}
+
+3行目で@<code>{shop_monitor.lock()}を呼び出し、モニタのロックを取得します。
+すでにモニタがロックされていた場合は、ロックが取得できるまで待つことになります。
+5,6行目でボードが空になるまでモニタをアンロックして待ちます。
+別の客に起こされたら、9行目でボードを取り出し、@<code>{_snowboard}に格納します。
+そして、10行目でモニタをアンロックします。
+
+次に、ボードを返却するメンバ関数を@<code>{return()}として定義します。
+
+//emlistnum{
+  void return() {
+    shop_monitor.lock();
+    // ボードを返す
+    rental_shop.snowboards.push(_snowboard);
+    _snowboard = NULL;
+    // 待っているスレッドを1つだけ呼び出す
+    shop_monitor.notify();
+    shop_monitor.unlock();
+  }
+//}
+
+こちらも@<code>{rent()}と同じくロックを取得した後で、ボードを返却します。
+返却したら7行目で待っている客を1人だけ呼び出し、8行目でモニタをアンロックします。
+呼び出された客（@<code>{rental()}で待っていた客）はモニタをロックしてボードを借ります。
