@@ -303,3 +303,71 @@ class Client {
 こちらも@<code>{rent()}と同じくロックを取得した後で、ボードを返却します。
 返却したら7行目で待っている客を1人だけ呼び出し、8行目でモニタをアンロックします。
 呼び出された客（@<code>{rental()}で待っていた客）はモニタをロックしてボードを借ります。
+
+== Mutexクラス
+
+ミューテックスを表現する@<code>{Mutex}クラスもHotspotVMには実装されています。
+@<code>{Mutex}クラスは@<code>{Monitor}クラスを継承して作られ、@<code>{Monitor}クラスの機能をほぼそのまま使います。
+
+//source[share/vm/runtime/mutex.hpp]{
+262: class Mutex : public Monitor {
+263:  public:
+264:    Mutex (int rank, const char *name, bool allow_vm_block=false);
+265:    ~Mutex () ;
+266:  private:
+267:    bool notify ()    { ShouldNotReachHere(); return false; }
+268:    bool notify_all() { ShouldNotReachHere(); return false; }
+269:    bool wait (bool no_safepoint_check,
+                   long timeout,
+                   bool as_suspend_equivalent) {
+270:      ShouldNotReachHere() ;
+271:      return false ;
+272:    }
+273: };
+//}
+
+ミューテックスはロックとアンロックだけあればよいので、267〜270行目で@<code>{notify()},@<code>{notify_all()},@<code>{wait()}を呼び出せないように再定義しています。
+
+== MutexLockerクラス
+
+@<code>{MutexLocker}クラスはロックの範囲をわかりやすく定義するのに役立つクラスです。
+
+//source[share/vm/runtime/mutexLocker.hpp]{
+156: class MutexLocker: StackObj {
+157:  private:
+158:   Monitor * _mutex;
+159:  public:
+160:   MutexLocker(Monitor * mutex) {
+163:     _mutex = mutex;
+164:     _mutex->lock();
+165:   }
+
+175:   ~MutexLocker() {
+176:     _mutex->unlock();
+177:   }
+178: 
+179: };
+//}
+
+このクラスがおこなうことはコンストラクタでメンバ変数の@<code>{_mutex}をロックし、デストラクタで@<code>{_mutex}をアンロックすることだけです。
+
+定義自体はシンプルですが、@<code>{MutexLocker}クラスを利用すれば、@<hd>{Monitorクラス}で紹介した@<code>{rent()}関数は次のように記述できます。
+
+//emlistnum{
+  void rent() {
+    {
+      MonitorLoker locker(shop_monitor);
+      while (rental_shop.snowboards.empty()) {
+        shop_monitor.wait();
+      }
+      _snowboard = rental_shop.snowboards.pop();
+    }
+  }
+//}
+
+3行目で@<code>{MonitorLoker}インスタンスを生成する際に、コンストラクタによって@<code>{shop_monitor}がロックされます。
+8行目ではスタックに割り当てられた@<code>{MonitorLoker}インスタンスが解放されますので、デクストラクタによって@<code>{shop_monitor}がアンロックされます。
+
+上記のように、@<code>{MutexLocker}クラスを利用するとロックが必要な処理の範囲がわかりやすくなります。
+また、大域脱出の際（例外発生時など）に、モニタのアンロックをし忘れる、といった凡ミスも防ぐことができます。
+そのため、HotspotVM内のコードではこの@<code>{MutexLocker}クラスや、Nullチェックの拡張を加えた@<code>{MutexLockerEx}クラスが多用されています。
