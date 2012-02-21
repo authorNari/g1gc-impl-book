@@ -46,15 +46,7 @@ HotspotVM内の多くのクラスはこの@<code>{CHeapObj}クラスを継承し
 
 == CollectedHeapクラス
 
-VMヒープは@<code>{CollectedHeap}という抽象的なクラスで統一的に扱われます。
-@<code>{CollectedHeap}クラスはGCアルゴリズムによって子クラスに派生し、この子クラスがVMヒープの実体となります。
-また、@<code>{CollectedHeap}クラスは@<code>{CHeapObj}クラスを継承しています。
-
-@<img>{collected_heap_hierarchy}に@<code>{CollectedHeap}クラスの継承関係を示しています。
-
-//image[collected_heap_hierarchy][CollectedHeapクラスの継承関係]
-
-//comment[TODO: 役割が書いていない]
+//comment[TODO: あとで削除]
 
 本章ではG1GC用のVMヒープである@<code>{g1CollectedHeap}クラスについてのみ説明します。
 
