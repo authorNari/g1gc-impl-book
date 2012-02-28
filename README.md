@@ -9,12 +9,13 @@
  * [スポンサーのみなさま](http://www.narihiro.info/g1gc-impl-book/sponsor.html)
  * [はじめに](http://www.narihiro.info/g1gc-impl-book/preface.html)
  * 1.[準備](http://www.narihiro.info/g1gc-impl-book/prepare.html)
- * 2.[アロケータ](http://www.narihiro.info/g1gc-impl-book/alloc.html)
- * 3.[ヒープ構造](http://www.narihiro.info/g1gc-impl-book/heap.html)
- * 4.[オブジェクト構造](http://www.narihiro.info/g1gc-impl-book/object.html)
- * 5.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
+ * 2.[オブジェクト管理機能](http://www.narihiro.info/g1gc-impl-book/abstract.html)
+ * 3.[アロケータ](http://www.narihiro.info/g1gc-impl-book/alloc.html)
+ * 4.[ヒープ構造](http://www.narihiro.info/g1gc-impl-book/heap.html)
+ * 5.[オブジェクト構造](http://www.narihiro.info/g1gc-impl-book/object.html)
  * 6.[HotspotVMのスレッド管理](http://www.narihiro.info/g1gc-impl-book/vm_thread.html)
  * 7.[スレッドの排他制御](http://www.narihiro.info/g1gc-impl-book/lock.html)
+ * x.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
 以下から（ある時点で）最新のebookをダウンロードできます。

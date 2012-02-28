@@ -3,6 +3,10 @@ abstract.re
 alloc.re
 heap.re
 object.re
-precise.re
 vm_thread.re
 lock.re
+gc_thread.re
+mark.re
+evac.re
+predict.re
+precise.re
