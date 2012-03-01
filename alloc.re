@@ -2,9 +2,9 @@
 
 この章ではHotspotVMのアロケーションについて詳しく説明します。
 
-== 各OS用のインターフェース
+== 各OS用のインタフェース
 
-HotspotVMは様々なOS上で動作する必要があります。そのため、各OSのAPIを統一のインターフェースを使って扱う便利な機構が用意されています。
+HotspotVMは様々なOS上で動作する必要があります。そのため、各OSのAPIを統一のインタフェースを使って扱う便利な機構が用意されています。
 
 //source[share/vm/runtime/os.hpp]{
 80: class os: AllStatic {
@@ -15,8 +15,7 @@ HotspotVMは様々なOS上で動作する必要があります。そのため、
 732: };
 //}
 
-@<code>{os}クラスが継承している@<code>{AllStatic}クラスは「静的な情報のみをもつクラス」という意味を持つ特殊なクラスです。
-@<code>{AllStatic}クラスを継承したクラスにはグローバル変数やそのアクセサ、静的（static）なメンバ関数などが定義されます。グローバル変数や関数を1つの名前空間にまとめたいときに、@<code>{AllStatic}クラスを継承します。つまり、@<code>{os}クラスはインスタンスを作成できません。
+@<code>{os}クラスは@<code>{AllStatic}クラスを継承するためインスタンスを作らずに利用します。
 
 @<code>{os}クラスに定義されたメンバ関数の実体は各OSに対して用意されています。
 
@@ -66,8 +65,10 @@ G1GCヒープにはリージョンが確保されました。
 
 では、実際にどのように実装されているかを見ていきましょう。
 
-VMヒープの予約は最初にG1GCヒープの初期化処理を行う@<code>{initialize()}メンバ関数に書かれています。
-その処理部分だけを次に抜き出しました。
+それぞれのVMヒープの初期化は@<code>{CollectedHeap}クラスを継承した子クラスの@<code>{initialize()}に記述されます。
+G1GCの場合は、@<code>{G1CollectedHeap}の@<code>{initialize()}です。
+VMヒープの予約はこの@<code>{initialize()}に記述されています。
+以下に、VMヒープの予約処理部分だけを抜き出しました。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
 1794: jint G1CollectedHeap::initialize() {
@@ -160,7 +161,7 @@ VMヒープの予約は最初にG1GCヒープの初期化処理を行う@<code>{
 1937:   if (!expand(init_byte_size)) {
 //}
 
-1809行目で@<code>{init_byte_size}にはじめに確保するメモリ領域サイズを格納します。
+@<code>{initialize()}の1809行目で@<code>{init_byte_size}に起動時に確保するメモリ領域サイズを格納します。
 そして@<code>{expand()}メンバ関数内でメモリ領域を確保します。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
@@ -325,7 +326,49 @@ VMヒープはリージョンのサイズでアラインメントされていま
 無事、リージョンはメモリ確保されました。
 では、そのリージョンからオブジェクトをアロケーションする部分を見ていきましょう。
 
-@<code>{HeapRegion}クラスの親クラスである@<code>{ContiguousSpace}クラスの@<code>{allocate()}メンバ関数によってリージョンからメモリ領域を確保します。
+=== アロケーションの流れ
+
+@<code>{CollectedHeap}の共通のインタフェースから、実際のG1GCのVMヒープからオブジェクトが割り当てられるまでのシーケンス図を@<img>{sequence_alloc}に示します。
+
+//image[sequence_alloc][オブジェクトアロケーションの流れ]
+
+まず、VMはオブジェクトの割り当て要求として@<code>{CollectedHeap::obj_allocate()}を呼び出します。
+次に、@<code>{CollectedHeap}は@<code>{Universe::heap()}を呼び出して、起動オプションで選択されたVMヒープクラス（この場合は@<code>{G1CollectedHeap}）のインスタンスを取得します。
+そして、VMヒープクラス共通の@<code>{mem_allocate()}を呼び出し、必要なサイズのメモリ領域の割り当てを行います。
+@<code>{G1CollectedHeap}内部でVMヒープから適切にメモリを切り出し、最終的に@<code>{CollectedHeap}に割り当てたメモリ領域を返します。
+その後、指定されたオブジェクト種類に応じたセットアップを行い、VMに返却します。
+
+=== G1GCのVMヒープへメモリ割り当て
+
+@<code>{G1CollectedHeap}内でおこわれる、VMヒープへのメモリ割り当てを見ていきましょう。
+まずは、@<code>{G1CollectedHeap}の@<code>{mem_allocate()}です。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+830: HeapWord*
+831: G1CollectedHeap::mem_allocate(size_t word_size,
+832:                               bool   is_noref,
+833:                               bool   is_tlab,
+834:                               bool*  gc_overhead_limit_was_exceeded) {
+
+843:     HeapWord* result = NULL;
+
+845:       result = attempt_allocation(word_size, &gc_count_before);
+
+849:     if (result != NULL) {
+850:       return result;
+851:     }
+
+         /* 省略: GC実行 */
+
+884: }
+//}
+
+オブジェクトのサイズを指定して@<code>{attempt_allocation()}を呼び出します。
+もし割り当てられなければGCを実行してVMヒープに空きを作るのですが、ここでは省略します。
+
+//comment[TODO: ヒープの章を充実させて、ここを詳細にわかりやすく書きたい]
+
+@<code>{ContiguousSpace}クラスから継承した@<code>{allocate_impl()}メンバ関数によってリージョンからメモリ領域を確保します。
 
 //source[share/vm/memory/space.cpp]{
 827: inline HeapWord* ContiguousSpace::allocate_impl(size_t size,
@@ -341,7 +384,7 @@ VMヒープはリージョンのサイズでアラインメントされていま
 847: }
 //}
 
-@<code>{allocate()}では単純にリージョン内のチャンクの先頭を指す@<code>{_top}をオブジェクトのサイズの分ずらすだけです。
+@<code>{allocate_impl()}では単純にリージョン内のチャンクの先頭を指す@<code>{_top}をオブジェクトのサイズの分ずらすだけです。
 
 関数の引数である@<code>{size}にはオブジェクトサイズのバイト数ではなく、ワード数が渡されます。
 もう1つの引数、@<code>{end_value}にはリージョン内チャンクの終端アドレスが渡されます。
@@ -352,7 +395,7 @@ VMヒープはリージョンのサイズでアラインメントされていま
 チャンクに空きがあれば、840行目で@<code>{obj}を@<code>{size}分ずらして、841行目でチャンクの先頭アドレスに設定します。
 そして、確保したメモリ領域の先頭（@<code>{obj}）を843行目で戻します。
 
-== 大型オブジェクトのアロケーション
+=== 大型オブジェクトのアロケーション
 
 G1GCではリージョンのサイズの半分を超えるオブジェクトを大型（humongous）オブジェクトと呼びます。
 この大型オブジェクトのアロケーションはどのように行われるでしょうか？
@@ -372,7 +415,7 @@ G1GCではリージョンのサイズの半分を超えるオブジェクトを�
 
 //comment[TODO:なぜ0クリアをわざわざ別スレッドで処理させるのか？]
 
-== TLAB（Thread Local Allocation Buffer）
+=== TLAB（Thread Local Allocation Buffer）
 
 VMヒープはすべてのスレッドの共有領域です。
 そのため、VMヒープからオブジェクトをアロケーションする際にはVMヒープをロックし、他のスレッドからのアロケーションが割り込まないようにする必要があります。

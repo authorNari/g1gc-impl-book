@@ -1,7 +1,7 @@
 prepare.re
 abstract.re
-alloc.re
 heap.re
+alloc.re
 object.re
 vm_thread.re
 lock.re

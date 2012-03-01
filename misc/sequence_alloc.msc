@@ -1,0 +1,18 @@
+msc {
+    hscale = "1.6";
+
+    VM,CollectedHeap,Universe,G1CollectedHeap,G1AllocRegion,HeapRegion;
+
+    VM => CollectedHeap [label="CollectedHeap\n::obj_allocate()"];
+    CollectedHeap => Universe [label="Universe::heap()"];
+    CollectedHeap <- Universe [label="G1CollectedHeapのインスタンス"];
+    CollectedHeap => G1CollectedHeap [label="mem_allocate()"];
+    G1CollectedHeap => G1AllocRegion [label="attempt_allocation()"];
+    G1AllocRegion => HeapRegion [label="par_allocate()"];
+    HeapRegion => HeapRegion [label="ContiguousSpace\n::allocate_impl()"];
+    G1AllocRegion <- HeapRegion [label="リージョンに割り当てたメモリ領域"];
+    G1CollectedHeap <- G1AllocRegion;
+    CollectedHeap <- G1CollectedHeap;
+    CollectedHeap box CollectedHeap [label="オブジェクト\nのセットアップ"];
+    VM <- CollectedHeap [label="割り当てたオブジェクト"];
+}
