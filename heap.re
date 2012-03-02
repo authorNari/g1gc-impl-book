@@ -19,11 +19,65 @@ HotspotVMは言語利用者によってGCアルゴリズムが選択されると
 この名前の通り、パーマネント領域には型情報（@<code>{klassOop}）やメソッド情報（@<code>{methodOop}）等の長生きするオブジェクトが割り当てられます。
 パーマネント領域はGCアルゴリズムが変更されてもほぼ同じ構造でVMヒープの一部として確保されます。
 
-== CollectedHeapクラス
+=== VMヒープクラスの初期化
 
-//comment[TODO: あとで削除]
+すべてのVMヒープクラスは@<code>{CollectedHeap}クラスを継承しています。
 
-本章ではG1GC用のVMヒープである@<code>{g1CollectedHeap}クラスについてのみ説明します。
+//source[share/vm/gc_interface/collectedHeap.hpp]{
+53: class CollectedHeap : public CHeapObj {
+
+286:   virtual bool is_permanent(const void *p) const = 0;
+
+323:   inline static oop obj_allocate(KlassHandle klass, int size, TRAPS);
+
+497:   virtual void collect(GCCause::Cause cause) = 0;
+//}
+
+@<code>{CollectedHeap}は@<code>{CHeapObj}を継承しており、上記のようにさまざまインタフェースを定義します。
+
+適切なVMヒープクラスは@<code>{Universe::initialize_heap()}で選ばれます。
+
+//source[share/vm/memory/universe.cpp]{
+882: jint Universe::initialize_heap() {
+883: 
+884:   if (UseParallelGC) {
+
+886:     Universe::_collectedHeap = new ParallelScavengeHeap();
+
+891:   } else if (UseG1GC) {
+
+893:     G1CollectorPolicy* g1p = new G1CollectorPolicy_BestRegionsFirst();
+894:     G1CollectedHeap* g1h = new G1CollectedHeap(g1p);
+895:     Universe::_collectedHeap = g1h;
+
+900:   } else {
+
+901:     GenCollectorPolicy *gc_policy;
+
+         /* 省略: 適切なCollectorPolicyを選ぶ */
+
+919:     Universe::_collectedHeap = new GenCollectedHeap(gc_policy);
+920:   }
+921: 
+922:   jint status = Universe::heap()->initialize();
+
+       ...
+//}
+
+GCアルゴリズムとVMヒープクラスの対応については@<hd>{abstract|CollectorPolicyクラス}ですでに述べました。
+ここでは、適切なVMヒープクラスのインスタンスが生成され、最終的に@<code>{initialize()}が呼び出される点と、@<code>{Universe::_collectedHeap}に格納される点を抑えておいてください。
+
+@<code>{Universe}クラスは次のように@<code>{AllStatic}クラスを継承したクラスです。
+
+//source[share/vm/memory/universe.hpp]{
+113: class Universe: AllStatic {
+
+201:   static CollectedHeap* _collectedHeap;
+
+346:   static CollectedHeap* heap() { return _collectedHeap; }
+//}
+
+@<code>{Universe::heap()}を呼び出すことで、@<code>{Universe::initialize_heap()}で選択した適切なVMヒープのインスタンスを取得できます。
 
 == G1GCヒープ
 
