@@ -65,9 +65,9 @@ HotspotVMは言語利用者によってGCアルゴリズムが選択されると
 //}
 
 GCアルゴリズムとVMヒープクラスの対応については@<hd>{abstract|CollectorPolicyクラス}ですでに述べました。
-ここでは、適切なVMヒープクラスのインスタンスが生成され、最終的に@<code>{initialize()}が呼び出される点と、@<code>{Universe::_collectedHeap}に格納される点を抑えておいてください。
+ここでは、適切なVMヒープクラスのインスタンスが生成され、最終的に@<code>{initialize()}を呼び出す点と、@<code>{Universe::_collectedHeap}に格納される点を抑えておいてください。
 
-@<code>{Universe}クラスは次のように@<code>{AllStatic}クラスを継承したクラスです。
+次に示す通り、@<code>{Universe}クラスは@<code>{AllStatic}クラスを継承したクラスです。
 
 //source[share/vm/memory/universe.hpp]{
 113: class Universe: AllStatic {
@@ -81,20 +81,12 @@ GCアルゴリズムとVMヒープクラスの対応については@<hd>{abstrac
 
 == G1GCヒープ
 
-G1GCのヒープは一定のサイズのリージョンに区切られています。
+G1GCのヒープは「アルゴリズム編 1.2 ヒープ構造」で示したとおり、一定のサイズのリージョンに区切られています。
 ここではG1GCヒープがリージョンをどのように保持しているかを見ていきましょう。
 
-G1GCヒープはそのサイズ分のメモリ領域を一度に確保します。
-そのため、G1GCヒープ内に確保されるリージョンは連続したアドレスになります。
+=== G1CollectedHeapクラス
 
-そして、リージョンには、それぞれを管理する@<code>{HeapRegion}クラスのインスタンスが存在します。
-これを@<code>{HeapRegion}と呼ぶことにします。
-
-@<code>{HeapRegion}は@<code>{_bottom}、@<code>{_end}メンバ変数をもち、それぞれG1GCヒープ内のリージョンの先頭アドレス、終端アドレスを格納しています。
-
-//image[heap_region][HeapRegion]
-
-次に列挙するのは@<code>{g1CollectedHeap}クラスの主要な3つのメンバ変数とその役割です。
+@<code>{G1CollectedHeap}クラスは非常に多くの役割を担っていますが、一度に説明しても混乱するだけですので、ここでは@<code>{G1CollectedHeap}クラスの主要な3つのメンバ変数の紹介に留めておきます。
 
  * @<code>{_hrs} - すべての@<code>{HeapRegion}を配列によって保持
  * @<code>{_young_list} - 新世代の@<code>{HeapRegion}リスト
@@ -102,17 +94,53 @@ G1GCヒープはそのサイズ分のメモリ領域を一度に確保します�
 
 //image[g1gc_heap][G1GCヒープの構造]
 
-@<code>{g1CollectedHeap}クラスは@<code>{HeapRegionSeq}クラスのインスタンスへのポインタを格納する@<code>{_hrs}メンバ変数を持ちます。
-@<code>{HeapRegionSeq}クラスの@<code>{_regions}メンバ変数という配列には@<code>{HeapRegion}クラスのインスタンス（以下、@<code>{HeapRegion}）のアドレスが格納されています。
+各リージョンは@<code>{HeapRegion}というクラスで管理されています。
+@<code>{G1CollectedHeap}クラスは@<code>{HeapRegionSeq}インスタンスへのポインタを格納する@<code>{_hrs}メンバ変数を持っています。
+@<code>{HeapRegionSeq}の@<code>{_regions}メンバ変数には、G1GCヒープのすべてのリージョンに対応する@<code>{HeapRegion}のアドレスが配列によって格納されています。
 
-@<code>{HeapRegion}は@<code>{g1CollectedHeap}クラスから伸びる@<code>{_young_list}、@<code>{_free_region_list}によって片方向リストでつながれています。
+@<code>{HeapRegion}は@<code>{G1CollectedHeap}クラスの@<code>{_young_list}、@<code>{_free_region_list}によって片方向リストでつながれています。
 
-新世代の@<code>{HeapRegion}は@<code>{_young_list}につながれています。空のリージョンと対応する@<code>{HeapRegion}はフリーリージョンリスト（@<code>{_free_region_list}）によってつながれています。そして、旧世代の@<code>{HeapRegion}は何のリンクにもつながれていません。
+新世代の@<code>{HeapRegion}は@<code>{_young_list}につながれています。
+空のリージョンと対応する@<code>{HeapRegion}はフリーリージョンリスト（@<code>{_free_region_list}）によってつながれています。
+そして、旧世代の@<code>{HeapRegion}は何のリンクにもつながれていません。
 
-//comment[TODO: GC用の追記をするかもしれない]
-//comment[TODO: 旧世代は？]
+=== HeapRegionクラス
 
-== HeapRegionSeqクラス
+@<code>{HeapRegion}は@<code>{_bottom}、@<code>{_end}メンバ変数をもち、それぞれリージョンの先頭アドレス、終端アドレスを格納しています。
+
+//image[heap_region][HeapRegion]
+
+@<code>{HeapRegion}クラスの継承図を@<img>{heap_region_hierarchy}に示します。
+
+//image[heap_region_hierarchy][HeapRegion継承図]
+
+継承関係が深いですが、そのすべてを覚える必要はありません。
+「様々なクラスから機能を受け継いでいる」ということがわかればOKです。
+
+@<code>{HeapRegion}クラスは@<code>{_bottom}・@<code>{_end}の他に@<code>{_top}というメンバ変数を持ちます。
+@<code>{_top}はリージョン内に存在するオブジェクトの先頭アドレスを保持します。
+@<code>{_bottom}・@<code>{_end}・@<code>{_top}は@<code>{Space}クラスに定義されており、よく利用されるメンバ変数ですので、しっかり覚えておきましょう。
+
+@<code>{HeapRegion}クラスには次の片方向リスト用のメンバ変数が定義されています。
+
+ 1. @<code>{_next_young_region}
+ 2. @<code>{_next_in_special_set}
+
+1.は名前の通り、次の新世代リージョンを指します。
+
+2.の@<code>{_next_in_special_set}メンバ変数はリージョンが所属する集合によって意味の違う様々なリージョンを指します。
+具体的に言えば、リージョンがフリーリージョンリストに所属するときには、次の空リージョンがつながれ、回収集合のリストに所属するときには、次のGC対象である使用中のリージョンがつながれます。
+@<code>{_next_in_special_set}メンバ変数は用途によって様々な使い方がされるということを覚えておいてください。
+
+また、@<code>{_next_in_special_set}メンバ変数にリージョンをつなぐとき、@<code>{_next_in_special_set}メンバ変数が何の用途に使われているかを覚えておくため、「このリージョンはこの集合に所属しています」というフラグを立てておきます。
+
+フラグに使用する主要なメンバ変数は次の通りです。
+これらのフラグはすべて@<code>{bool}型です。
+
+  * @<code>{_in_collection_set} - 回収集合内のリージョン
+  * @<code>{_is_gc_alloc_region} - 前回の退避後にオブジェクトが割り当てられたリージョン
+
+=== HeapRegionSeqクラス
 
 @<code>{HeapRegionSeq}クラスはHotspotVMが独自に実装している@<code>{GrowableArray}という配列を表現するクラスをラップする形で定義されています。
 
@@ -136,61 +164,11 @@ G1GCヒープはそのサイズ分のメモリ領域を一度に確保します�
 @<code>{GrowableArray}クラスは通常の配列と違い、要素を追加する際に配列を拡張する処理が実装されています。
 名前の通り、増大可能な（Growable）配列なのです。
 
-@<code>{_regions}メンバ変数の配列内の@<code>{HeapRegion}はリージョンのアドレスによって昇順にソートされています。
-つまり、インデックス0とインデックス1に格納されている@<code>{HeapRegion}は、VMヒープ上で隣り合ったリージョンを管理しているということです。
-
-63行目の@<code>{insert()}メンバ関数で@<code>{_regions}に新しいリージョンのアドレスを追加します。この@<code>{insert()}関数内で配列のソート処理を行います。
+@<code>{_regions}に格納される@<code>{HeapRegion}の配列は、リージョンの先頭アドレスの昇順にソートされた状態を保ちます。
+63行目の@<code>{insert()}メンバ関数で@<code>{_regions}に新しいリージョンのアドレスを追加します。
+この@<code>{insert()}で配列のソートをおこないます。
 
 70行目の@<code>{at()}メンバ関数は指定したインデックスのリージョンを返します。
-
-== HeapRegionクラス
-
-リージョンを管理する@<code>{HeapRegion}クラスをさらに詳しく見ていきましょう。
-
-@<code>{HeapRegion}クラスの継承図を@<img>{heap_region_hierarchy}に示します。
-
-//image[heap_region_hierarchy][HeapRegion継承図]
-
-継承関係が深いですが、そのすべてを覚える必要はありません。
-「様々なクラスから機能を受け継いでいる」ということがわかればOKです。
-
-@<code>{HeapRegion}クラスには@<code>{_bottom}、@<code>{_top}、@<code>{_end}という3つのローカル変数があります。
-それぞれの意味は次の通りです。
-
- * _bottom - リージョンの先頭アドレス
- * _top - リージョン内のチャンク先頭アドレス
- * _end - リージョンの終端アドレス
-
-この3つのローカル変数は@<code>{Space}クラスに定義されています。
-もっともよく登場するローカル変数ですので、きちんと頭に入れておいてください。
-
-さらに、@<code>{HeapRegion}クラスには3つの片方向リスト用のメンバ変数が定義されています。
-
- 1. @<code>{_next_young_region}
- 2. @<code>{_next_dirty_cards_region}
- 3. @<code>{_next_in_special_set}
-
-1.は名前の通り、次の新世代リージョンを指します。
-//comment[2.については@<chap>{g1gc}の章で詳しく説明します。]
-
-もっとも重要なのは3.の@<code>{_next_in_special_set}メンバ変数です。
-このメンバ変数はリージョンが所属する集合によって意味の違う様々なリージョンを指します。
-具体的に言えば、リージョンがフリーリージョンリストに所属するときには、次の空リージョンがつながれ、GC対象のリストに所属するときには、次のGC対象である使用中のリージョンがつながれます。
-@<code>{_next_in_special_set}メンバ変数は用途によって様々な使い方がされるということを覚えておいてください。
-
-また、@<code>{_next_in_special_set}メンバ変数にリージョンをつなぐとき、@<code>{_next_in_special_set}メンバ変数が何の用途に使われているかを覚えておくため、「このリージョンはこの集合に所属しています」というフラグを立てておきます。
-
-フラグに使用するメンバ変数は次の通りです。これらのフラグはすべて@<code>{bool}型です。
-
-  * _in_collection_set - GC対象のリージョン
-  * _is_on_unclean_list - 空のリージョン（0クリアがまだ）
-  * _is_on_free_list - 空のリージョン（0クリアが済み）
-  * _is_gc_alloc_region - GC時にオブジェクトを退避するリージョン
-
-//comment[TODO:意味]
-
-ここではすべてを覚える必要はありません。
-このようなものでリージョンの所属を判断しているのかという点が理解できれば十分です。
 
 == パーマネント領域
 
