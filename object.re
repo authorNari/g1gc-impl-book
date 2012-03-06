@@ -1,6 +1,6 @@
 = オブジェクト構造
 
-まずは、データ構造から見ていきましょう。
+本章ではオブジェクトのデータ構造を見ていきます。
 
 == oopDescクラス
 
@@ -68,7 +68,7 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 @<code>{oopDesc}クラスを継承している@<code>{klassOopDesc}クラスはJava上のクラスを表すクラスです。
 つまり、Java上の「java.lang.String」は、VM上では@<code>{klassOopDesc}クラスのインスタンス（@<code>{klassOop}）となります。
 クラス名の一部が「@<code>{class}」ではなく「@<code>{klass}」となっているのは、C++の予約語と区別するためです。
-このテクニックは多くの言語処理系によく見かけます。
+このテクニックは多くの言語処理系でよく見かけます。
 
 前の@<hd>{oopDescクラス}の項で説明した通り、全オブジェクトは@<code>{klassOop}を持っています。
 @<code>{klassOopDesc}も@<code>{oopDesc}を継承しているため、@<code>{klassOop}を持っています。
