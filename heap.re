@@ -90,7 +90,7 @@ G1GCのヒープは「アルゴリズム編 1.2 ヒープ構造」で示した�
 
  * @<code>{_hrs} - すべての@<code>{HeapRegion}を配列によって保持
  * @<code>{_young_list} - 新世代の@<code>{HeapRegion}リスト
- * @<code>{_free_region_list} - 未使用の@<code>{HeapRegion}リスト
+ * @<code>{_free_region_list} - 空き@<code>{HeapRegion}リスト
 
 //image[g1gc_heap][G1GCヒープの構造]
 
@@ -101,7 +101,7 @@ G1GCのヒープは「アルゴリズム編 1.2 ヒープ構造」で示した�
 @<code>{HeapRegion}は@<code>{G1CollectedHeap}クラスの@<code>{_young_list}、@<code>{_free_region_list}によって片方向リストでつながれています。
 
 新世代の@<code>{HeapRegion}は@<code>{_young_list}につながれています。
-空のリージョンと対応する@<code>{HeapRegion}はフリーリージョンリスト（@<code>{_free_region_list}）によってつながれています。
+空のリージョンと対応する@<code>{HeapRegion}は空きリージョンリスト（@<code>{_free_region_list}）によってつながれています。
 そして、旧世代の@<code>{HeapRegion}は何のリンクにもつながれていません。
 
 === HeapRegionクラス
@@ -118,7 +118,7 @@ G1GCのヒープは「アルゴリズム編 1.2 ヒープ構造」で示した�
 「様々なクラスから機能を受け継いでいる」ということがわかればOKです。
 
 @<code>{HeapRegion}クラスは@<code>{_bottom}・@<code>{_end}の他に@<code>{_top}というメンバ変数を持ちます。
-@<code>{_top}はリージョン内に存在するオブジェクトの先頭アドレスを保持します。
+@<code>{_top}はリージョン内の空きメモリ領域の先頭アドレスを保持します。
 @<code>{_bottom}・@<code>{_end}・@<code>{_top}は@<code>{Space}クラスに定義されており、よく利用されるメンバ変数ですので、しっかり覚えておきましょう。
 
 @<code>{HeapRegion}クラスには次の片方向リスト用のメンバ変数が定義されています。
