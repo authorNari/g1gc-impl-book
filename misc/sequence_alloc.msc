@@ -8,7 +8,7 @@ msc {
     CollectedHeap <- Universe [label="G1CollectedHeapのインスタンス"];
     CollectedHeap => G1CollectedHeap [label="mem_allocate()"];
     G1CollectedHeap => G1AllocRegion [label="attempt_allocation()"];
-    G1AllocRegion => HeapRegion [label="par_allocate()"];
+    G1AllocRegion => HeapRegion [label="allocate_no_bot_updates()"];
     HeapRegion => HeapRegion [label="ContiguousSpace\n::allocate_impl()"];
     G1AllocRegion <- HeapRegion [label="リージョンに割り当てたメモリ領域"];
     G1CollectedHeap <- G1AllocRegion;

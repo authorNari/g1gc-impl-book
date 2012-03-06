@@ -9,17 +9,17 @@ G1GCにおけるオブジェクトのアロケーションをVMヒープの初�
 
 //image[1_heap_reserve][(1)VMヒープの予約]
 
-まず、G1GCのVMヒープ（G1GCヒープとパーマネント領域）の最大サイズ分をメモリ領域に「予約」します。
+まず、G1GCのVMヒープ（G1GCヒープとパーマネント領域）の最大サイズ分をメモリ領域に@<b>{予約}します。
 最大G1GCヒープサイズと最大パーマネント領域サイズは言語利用者が指定できます。
 指定されなかった場合、標準のVMヒープの最大サイズはOSによっても異なりますが、ほとんどの場合、G1GCヒープの最大サイズが64Mバイト、パーマネント領域の最大サイズが64Mバイトの合わせて128Mバイトととなります。
-ここではメモリ領域を「予約」するだけで、実際に物理メモリに割り当てられません。
+ここではメモリ領域を予約するだけで、実際に物理メモリに割り当てられません。
 また、G1GCのVMヒープはリージョンのサイズでアラインメントされます。
 
 //image[2_heap_commit][(2)VMヒープの確保]
 
-次に、予約しておいたVMヒープに必要最小限のメモリ領域を「確保」します。
+次に、予約しておいたVMヒープに必要最小限のメモリ領域を@<b>{確保}します。
 ここで実際に物理メモリへ割り当てされます。
-G1GCヒープの方はリージョン単位で「確保」されます。
+G1GCヒープの方はリージョン単位で確保されます。
 
 //image[3_heap_obj_alloc][(3)オブジェクトのアロケーション]
 
@@ -29,7 +29,7 @@ G1GCヒープにはリージョンが確保されました。
 
 //image[4_heap_expand][(4)G1GCヒープの拡張]
 
-オブジェクトのアロケーションによってリージョンが枯渇すると、予約しておいたメモリ領域からメモリを「確保」し、新たにリージョンを1個割り当て、G1GCヒープを拡張します。
+オブジェクトのアロケーションによってリージョンが枯渇すると、予約しておいたメモリ領域からメモリを確保し、新たにリージョンを1個割り当て、G1GCヒープを拡張します。
 そして、割り当てたリージョンの中にオブジェクトをアロケーションします。
 
 == VMヒープの予約
@@ -64,7 +64,7 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
 @<code>{ReservedSpace}クラスのインスタンス生成には次の引数を渡します。
 1827行目の他の引数（@<code>{UseLargePages}、@<code>{addr}）については使用されませんので無視してください。
 
- 1. 最大G1GCヒープサイズ + 最大パーム領域サイズ
+ 1. 最大G1GCヒープサイズ + 最大パーマネント領域サイズ
  2. リージョンサイズ（@<code>{HeapRegion::GrainBytes}）
 
 1. は予約するメモリ領域のサイズです。
@@ -91,14 +91,15 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
         /* 省略：ReservedSpace生成 */
 
 1884:   ReservedSpace g1_rs   = heap_rs.first_part(max_byte_size);
+
 1889:   ReservedSpace perm_gen_rs = heap_rs.last_part(max_byte_size);
 //}
 
-@<code>{ReservedSpace}クラスのインスタンスを生成し終わると、G1GCヒープとパーマネント領域を分割して、それぞれに対応したローカル変数（@<code>{g1_rs}、@<code>{perm_gen_rs}）に格納します。
+@<code>{ReservedSpace}クラスのインスタンスを生成し終わると、G1GCヒープとパーマネント領域を分割して、それぞれに対応したローカル変数（@<code>{g1_rs}・@<code>{perm_gen_rs}）に格納します。
 
 == VMヒープの確保
 
-予約したVMヒープ用のメモリ領域を実際に「確保」していくクラスが@<code>{VirtualSpace}クラスです。
+予約したVMヒープ用のメモリ領域を実際に確保していくクラスが@<code>{VirtualSpace}クラスです。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.hpp]{
 143: class G1CollectedHeap : public SharedHeap {
@@ -117,7 +118,7 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
 //}
 
 1891行目で@<code>{_g1_storage}メンバ変数を初期化します。
-第1引数に生成したG1GCヒープ用の@<code>{ReservedSpace}クラスのインスタンスへのポインタを渡し、第2引数には確保するサイズを指定します。
+第1引数に生成したG1GCヒープ用の@<code>{ReservedSpace}のポインタを渡し、第2引数には確保するサイズを指定します。
 この場合は@<code>{0}です。したがって、まだメモリ領域は確保されていません。
 
 では、実際に確保する処理を見てみましょう。
@@ -133,7 +134,12 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
 //}
 
 @<code>{initialize()}の1809行目で@<code>{init_byte_size}に起動時に確保するメモリ領域サイズを格納します。
-そして@<code>{expand()}メンバ関数内でメモリ領域を確保します。
+そして、@<code>{expand()}メンバ関数内でメモリ領域を確保します。
+
+=== リージョンの確保
+
+@<code>{expand()}は指定されたメモリ領域分のリージョンを確保するメソッドです。
+VMヒープの初期化時、空きリージョンが枯渇したときに呼び出されます。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
 1599: bool G1CollectedHeap::expand(size_t expand_bytes) {
@@ -157,6 +163,7 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
 1635: 
 1636:       // HeapRegionSeqに追加
 1637:       _hrs->insert(hr);
+1638:       _free_list.add_as_tail(hr);
 
 1643:       expand_bytes -= HeapRegion::GrainBytes;
 1644:       base += HeapRegion::GrainWords;
@@ -168,22 +175,28 @@ VMヒープの予約はこの@<code>{initialize()}に記述されています。
 
 前半部分で引数に受け取った@<code>{expand_bytes}をリージョンサイズで切り上げ、@<code>{aligned_expand_bytes}に設定します。
 
-1610行目で確保しているメモリ領域の終端を受け取ります。今回の場合、メモリ領域はまだ確保されていませんので、予約されたVMヒープ用メモリ領域の先頭アドレスが戻ります。
+1610行目で確保中メモリ領域の終端を受け取ります。
+VMヒープ初期化時にはメモリ領域はまだ確保されていませんので、予約されたVMヒープ用メモリ領域の先頭アドレスが戻ります。
 また、同行に登場する@<code>{HeapWord*}はVMヒープ内のアドレスを指す場合に使用します。
 
-1611行目にある@<code>{VirtualSpace}クラスの@<code>{expand_by()}メンバ関数で実際のメモリ領域の確保を行います。リージョン1個分を確保しています。
+1611行目にある@<code>{VirtualSpace}の@<code>{expand_by()}で実際のメモリ領域の確保を行います。
+@<code>{expand_by()}は確保するメモリ領域のサイズを引数に取ります。
+ここでは@<code>{aligned_expand_bytes}を受け取っていますので、確保するリージョン分のメモリ領域を確保しています。
 
-メモリ領域の確保に成功した場合は、その領域を管理するリージョンを生成します。
+メモリ領域の確保に成功した場合は、リージョンを管理する@<code>{HeapRegion}を生成します。
 
-1629行目で@<code>{base}のリージョン1個分先のアドレスを設定します。1632行目の@<code>{MemRegion}クラスはアドレスの範囲を管理するクラスです。コンストラクタの引数には範囲の先頭アドレスと終端アドレスを渡します。
+1629行目で@<code>{base}のリージョン1個分先のアドレスを設定します。
+1632行目の@<code>{MemRegion}クラスはアドレスの範囲を管理するクラスです。
+コンストラクタの引数には範囲の先頭アドレスと終端アドレスを渡します。
 そして、1634行目で@<code>{HeapRegion}クラスのインスタンスを生成します。
 第1引数の@<code>{_bot_shared}と第3引数の@<code>{is_zeroed}は特に関係ありませんので、ここでは無視します。
 
-1637行目で生成した@<code>{HeapRegion}クラスのインスタンスへのポインタを@<code>{HeapRegionSeq}に追加すれば、リージョン1個分のメモリ領域確保は終了です。あとはこれを@<code>{expand_bytes}の分繰り返すだけです。
+1637行目で生成した@<code>{HeapRegion}クラスのインスタンスへのポインタを@<code>{HeapRegionSeq}に追加し、1638行目で@<code>{_free_region_list}につなげばリージョン1個分のメモリ領域確保は終了です。
+あとはこれを確保したメモリ領域（@<code>{aligned_expand_bytes}）の分、繰り返すだけです。
 
-== Windowsでのメモリ領域の予約、確保
+=== Windowsでのメモリ領域の予約・確保
 
-メモリ領域の予約、確保は実際どのように実装されているのか調べていきましょう。実装方法はOSによって異なります。まずはWindowsから見ていきましょう。
+メモリ領域の予約・確保は実際どのように実装されているのか調べていきましょう。実装方法はOSによって異なります。まずはWindowsから見ていきましょう。
 
 Windowsには@<code>{VirtualAlloc()}というWindowsAPIがあります。
 HotspotVMではこのAPIを使ってメモリ確保の予約、確保を実現しています。
@@ -204,7 +217,7 @@ HotspotVMではこのAPIを使ってメモリ確保の予約、確保を実現�
 2725: }
 //}
 
-2721行目の第3引数に渡されている@<code>{MEM_RESERVE}がメモリ領域を「予約」する際のフラグです。@<code>{MEM_RESERVE}が渡されると指定されたサイズのメモリ領域は予約されるだけで実際には物理メモリに割り当てされません。
+2721行目の第3引数に渡されている@<code>{MEM_RESERVE}がメモリ領域を予約する際のフラグです。@<code>{MEM_RESERVE}が渡されると指定されたサイズのメモリ領域は予約されるだけで実際には物理メモリに割り当てされません。
 
 次に、メモリ領域を確保する@<code>{os::commit_memory()}メンバ関数を見てみましょう。不要な部分は省略しました。
 
@@ -218,16 +231,16 @@ HotspotVMではこのAPIを使ってメモリ確保の予約、確保を実現�
 2874: }
 //}
 
-2866行目の第3引数に渡されている@<code>{MEM_COMMIT}がメモリ領域を「確保」する際のフラグです。@<code>{MEM_COMMIT}が渡されると指定されたサイズ分のメモリ領域が実際に物理メモリと割り当てられます。
+2866行目の第3引数に渡されている@<code>{MEM_COMMIT}がメモリ領域を確保する際のフラグです。@<code>{MEM_COMMIT}が渡されると指定されたサイズ分のメモリ領域が実際に物理メモリと割り当てられます。
 
-== Linuxでのメモリ領域の予約、確保
+=== Linuxでのメモリ領域の予約・確保
 
-Linuxではメモリ領域の「予約」「確保」を@<code>{mmap()}で実装しています。
+Linuxではメモリ領域の予約・確保を@<code>{mmap()}で実装しています。
 
-実はLinuxにはメモリ領域を「予約」するという概念はありません。
-@<code>{mmap()}するとメモリ領域は「確保」されます。ただし、メモリ領域は「確保」されても物理メモリが割り当てられるわけではありません。物理メモリが割り当てられるのは確保したメモリ領域に実際にアクセスされたときです。「デマンドページング」と呼ばれる機能です。
+実はLinuxにはメモリ領域を予約するという概念はありません。
+@<code>{mmap()}するとメモリ領域は確保されます。ただし、メモリ領域は確保されても物理メモリが割り当てられるわけではありません。物理メモリが割り当てられるのは確保したメモリ領域に実際にアクセスされたときです。「デマンドページング」と呼ばれる機能です。
 
-メモリ領域の「予約」にあたる部分である@<code>{os::reserve_memory()}メンバ関数のLinux版を見ていきましょう。
+メモリ領域の予約にあたる部分である@<code>{os::reserve_memory()}メンバ関数のLinux版を見ていきましょう。
 
 //source[os/linux/vm/os_linux.cpp]{
 2787: char* os::reserve_memory(size_t bytes, char* requested_addr,
@@ -251,17 +264,17 @@ Linuxではメモリ領域の「予約」「確保」を@<code>{mmap()}で実装
 2777: }
 //}
 
-@<code>{os::reserve_memory()}は内部で@<code>{os::anon_mmap()}を呼び出すだけです。@<code>{os::anon_mmap()}は@<code>{MAP_ANONYMOUS}を使ってメモリ領域を確保します。Linux版ではメモリ領域を「予約」するのではなく、実際には「確保」するのですね。
+@<code>{os::reserve_memory()}は内部で@<code>{os::anon_mmap()}を呼び出すだけです。@<code>{os::anon_mmap()}は@<code>{MAP_ANONYMOUS}を使ってメモリ領域を確保します。Linux版ではメモリ領域を予約するのではなく、実際には確保するのですね。
 
-また、2751行目で@<code>{mmap()}に渡される@<code>{flag}ローカル変数に設定している@<code>{MAP_NORESERVE}には「スワップ空間の予約を行わない」という意味があります。@<code>{mmap()}してアドレスが確保された場合、そのメモリ領域に確実に割り当てられる保証を得るために、スワップ空間をサイズ分一気に予約してしまうOSがあります。@<code>{MAP_NORESERVE}にはそれを防ぐ効果があります。@<code>{os::reserve_memory()}の段階ではVMヒープ用のメモリ領域を「予約」するだけで、実際にオブジェクトをアロケーションするなどのアクセスを行いません。そのため、スワップ空間を予約するのは無駄だということです。HP-UX@<fn>{hp-ux}のようにスワップ空間を予約するOSには効果のある工夫です。
+また、2751行目で@<code>{mmap()}に渡される@<code>{flag}ローカル変数に設定している@<code>{MAP_NORESERVE}には「スワップ空間の予約を行わない」という意味があります。@<code>{mmap()}してアドレスが確保された場合、そのメモリ領域に確実に割り当てられる保証を得るために、スワップ空間をサイズ分一気に予約してしまうOSがあります。@<code>{MAP_NORESERVE}にはそれを防ぐ効果があります。@<code>{os::reserve_memory()}の段階ではVMヒープ用のメモリ領域を予約するだけで、実際にオブジェクトをアロケーションするなどのアクセスを行いません。そのため、スワップ空間を予約するのは無駄だということです。HP-UX@<fn>{hp-ux}のようにスワップ空間を予約するOSには効果のある工夫です。
 
-メモリ領域の「確保」にあたる部分である@<code>{os::commit_memory()}メンバ関数では、逆に「確保」したいアドレス分だけ@<code>{MAP_NORESERVE}を付けずに@<code>{mmap()}します。似たような処理のため、コードの紹介はしません。
+メモリ領域の確保にあたる部分である@<code>{os::commit_memory()}メンバ関数では、逆に確保したいアドレス分だけ@<code>{MAP_NORESERVE}を付けずに@<code>{mmap()}します。似たような処理のため、コードの紹介はしません。
 
 Linuxの場合、実際に物理メモリに割り当てられタイミングはWindowsとは異なります。確保したメモリ領域にオブジェクトがアロケーションされ、実際にアクセスされたときに物理メモリが割り当てられます。
 
 //footnote[hp-ux][HP-UX：ヒューレット・パッカード社（HP 社）製の UNIX オペレーティングシステム]
 
-== VMヒープのアラインメント実現方法
+=== VMヒープのアラインメント実現方法
 
 VMヒープはリージョンのサイズでアラインメントされています。つまり、VMヒープの先頭アドレスはリージョンサイズの倍数になっているということです。HotspotVMではこのアラインメントをどのようにして実現しているのでしょうか？
 
@@ -294,8 +307,7 @@ VMヒープはリージョンのサイズでアラインメントされていま
 
 == オブジェクトのアロケーション
 
-無事、リージョンはメモリ確保されました。
-では、そのリージョンからオブジェクトをアロケーションする部分を見ていきましょう。
+次はVMヒープ上の確保されたリージョンからオブジェクトをアロケーションする部分を見ていきましょう。
 
 === アロケーションの流れ
 
@@ -334,12 +346,53 @@ VMヒープはリージョンのサイズでアラインメントされていま
 884: }
 //}
 
-オブジェクトのサイズを指定して@<code>{attempt_allocation()}を呼び出します。
+845行目でオブジェクトのサイズを指定して@<code>{attempt_allocation()}を呼び出します。
 もし割り当てられなければGCを実行してVMヒープに空きを作るのですが、ここでは省略します。
 
-//comment[TODO: ヒープの章を充実させて、ここを詳細にわかりやすく書きたい]
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.inline.hpp]{
+63: inline HeapWord*
+64: G1CollectedHeap::attempt_allocation(size_t word_size,
+65:                                     unsigned int* gc_count_before_ret) {
 
-@<code>{ContiguousSpace}クラスから継承した@<code>{allocate_impl()}メンバ関数によってリージョンからメモリ領域を確保します。
+70:   HeapWord* result = _mutator_alloc_region.attempt_allocation(word_size,
+71:                                                       false /* bot_updates */);
+72:   if (result == NULL) {
+73:     result = attempt_allocation_slow(word_size, gc_count_before_ret);
+74:   }
+
+79:   return result;
+80: }
+//}
+
+70行目の@<code>{attempt_allocation()}は@<code>{G1AllocRegion}のメンバ関数です。
+@<code>{G1AllocRegion}はオブジェクトを割り当てるリージョンを管理するクラスで、空きのあるリージョンを内部で1つだけ保持しています。
+@<code>{attempt_allocation()}でリージョンからオブジェクトを割り当てようと試みます。
+
+もし@<code>{G1AllocRegion}内のリージョンに必要な分の空きがなく、割り当てに失敗したら、73行目で@<code>{attempt_allocation_slow()}が呼び出されます。
+@<code>{attempt_allocation_slow()}では@<code>{G1AllocRegion}に対して、新たな空きリージョンが設定され、リージョンに対して必要なサイズ分が割り当てられますが、処理の本筋とはそれほど関係ありませんのでここでは省略します。
+
+//source[share/vm/gc_implementation/g1/g1AllocRegion.inline.hpp]{
+55: inline HeapWord* G1AllocRegion::attempt_allocation(size_t word_size,
+56:                                                    bool bot_updates) {
+
+59:   HeapRegion* alloc_region = _alloc_region;
+
+62:   HeapWord* result = par_allocate(alloc_region, word_size, bot_updates);
+63:   if (result != NULL) {
+
+65:     return result;
+66:   }
+
+68:   return NULL;
+69: }
+//}
+
+59行目に登場する@<code>{_alloc_region}メンバ変数が、@<code>{G1AllocRegion}が管理する空きリージョンです。
+62行目でその空きリージョンを引数に@<code>{par_allocate()}を呼び出します。
+
+@<code>{par_allocate()}からいくつかの関数を経由し、最終的に空きリージョン（@<code>{HeapRegion}）の@<code>{allocate_impl()}メンバ関数を呼び出します。
+
+@<code>{allocate_impl()}は@<code>{ContiguousSpace}クラスに定義してあるメンバ関数で、実際にリージョンからメモリ領域を確保する役割を持ちます。
 
 //source[share/vm/memory/space.cpp]{
 827: inline HeapWord* ContiguousSpace::allocate_impl(size_t size,
@@ -355,27 +408,15 @@ VMヒープはリージョンのサイズでアラインメントされていま
 847: }
 //}
 
-@<code>{allocate_impl()}では単純にリージョン内のチャンクの先頭を指す@<code>{_top}をオブジェクトのサイズの分ずらすだけです。
-
-関数の引数である@<code>{size}にはオブジェクトサイズのバイト数ではなく、ワード数が渡されます。
+@<code>{allocate_impl()}の引数である@<code>{size}にはオブジェクトサイズのバイト数ではなく、ワード数が渡されます。
 もう1つの引数、@<code>{end_value}にはリージョン内チャンクの終端アドレスが渡されます。
 
 839行目の@<code>{pointer_delta()}は指定されたアドレスの差分をワード数で戻す関数です。
-もし、@<code>{size}分空きがなければ845行目で@<code>{NULL}を戻します。
+ここでは、リージョン内の空き領域の先頭を指す@<code>{_top}と、@<code>{end_value}の差分を求め、空きメモリ領域のサイズをワード数で返します。
+もし、@<code>{size}分の空きがなければ845行目で@<code>{NULL}を戻します。
 
-チャンクに空きがあれば、840行目で@<code>{obj}を@<code>{size}分ずらして、841行目でチャンクの先頭アドレスに設定します。
+リージョンに充分な空きがあれば、840行目で@<code>{obj}を@<code>{size}分ずらして、841行目でチャンクの先頭アドレスに設定します。
 そして、確保したメモリ領域の先頭（@<code>{obj}）を843行目で戻します。
-
-=== 大型オブジェクトのアロケーション
-
-G1GCではリージョンのサイズの半分を超えるオブジェクトを大型（humongous）オブジェクトと呼びます。
-この大型オブジェクトのアロケーションはどのように行われるでしょうか？
-
-リージョン1個半のサイズをもつ大型オブジェクトをアロケーションしたいと仮定します。
-まず、G1GCのアロケータは@<code>{HeapRegionSeq}クラスのインスタンスが持つ@<code>{HeapRegion}の配列を走査し、2個連続した空のリージョンを探します。
-
-2個の空リージョンそれぞれの@<code>{allocation()}関数をリージョンサイズを引数に呼び出し、リージョン全体をアロケーションします。
-つまり、大型オブジェクトのサイズがリージョン1個半でも、アロケータは2個分のリージョンを確保します。
 
 //comment[== TODO リージョンの0クリアスレッド]
 
@@ -386,7 +427,9 @@ G1GCではリージョンのサイズの半分を超えるオブジェクトを�
 
 //comment[TODO:なぜ0クリアをわざわざ別スレッドで処理させるのか？]
 
-=== TLAB（Thread Local Allocation Buffer）
+== TLAB（Thread Local Allocation Buffer）
+
+アロケーションの工夫の1つとして@<b>{TLAB}について簡単に説明しておきましょう。
 
 VMヒープはすべてのスレッドの共有領域です。
 そのため、VMヒープからオブジェクトをアロケーションする際にはVMヒープをロックし、他のスレッドからのアロケーションが割り込まないようにする必要があります。
