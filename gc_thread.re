@@ -12,9 +12,9 @@
 HotspotVMには複数のスレッドで並列に「何かのタスク」を実行する仕組みが実装されています。
 それを構成する主な登場人物は次のとおりです。
 
-  * @<code>{GangWorker} - 与えられたタスクを実行するワーカー
-  * @<code>{AbstractGangTask} - ワーカーに実行させるタスク
   * @<code>{AbstractWorkGang} - ワーカーの集団
+  * @<code>{AbstractGangTask} - ワーカーに実行させるタスク
+  * @<code>{GangWorker} - 与えられたタスクを実行するワーカー
 
 上記の登場人物が並列にタスクを実行する一連の流れをこれから示します。
 
@@ -67,6 +67,21 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 すべてのワーカーがタスクを終えていれば、クライアントは満足してモニタから出て行きます。
 
 以上が並列実行の流れです。
+
+=== AbstractWorkGangクラス
+ここからはそれぞれの登場人物の詳細を述べています。
+
+@<code>{AbstractWorkGang}クラスの継承関係を@<img>{abstract_worker_gang_hierarchy}に示します。
+
+//image[abstract_worker_gang_hierarchy][@<code>{AbstractWorkGang}クラスの継承関係]
+
+@<code>{AbstractWorkGang}クラスは@<code>{WorkGang}に必要なインタフェースを定義するクラスです。
+モニタ・所属するワーカー等の@<code>{WorkGang}に必要な属性を初期化・解放する処理も実装されています。
+
+@<code>{WorkGang}クラスには実際にタスクを受け取って処理を@<code>{worker}に渡す処理が定義されています。
+
+@<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
+並列GCにはこの@<code>{FlexibleWorkGang}クラスがよく利用されます。
 
 == 並行GC
   * ConcurrentGCThread
