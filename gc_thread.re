@@ -83,6 +83,34 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 @<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
 並列GCにはこの@<code>{FlexibleWorkGang}クラスがよく利用されます。
 
+=== AbstractGangTaskクラス
+
+@<code>{AbstractGangTask}クラスの継承関係を@<img>{abstract_gang_task_hierarchy}に示します。
+
+//image[abstract_gang_task_hierarchy][@<code>{AbstractGangTask}クラスの継承関係]
+
+@<code>{AbstractGangTask}は並列実行するタスクとして必要なインタフェースの仮想関数を定義しています。
+
+//source[share/vm/utilities/workgroup.hpp]{
+64: class AbstractGangTask VALUE_OBJ_CLASS_SPEC {
+65: public:
+
+68:   virtual void work(int i) = 0;
+//}
+
+もっとも重要なメンバ関数は68行目の@<code>{work()}です。
+@<code>{work()}はワーカーの識別番号（連番）を受け取り、タスクを実行する関数です。
+
+タスクの詳細な処理は、@<code>{G1ParTask}のようなそれぞれの子クラスで@<code>{work()}として定義します。
+クライアントは子クラスのインスタンスを@<code>{AbstractWorkGang}に渡して、並列実行してもらうわけです。
+
+=== GangWorkerクラス
+@<code>{GangWorker}クラスはタスクを実際に実行するクラスで、@<code>{Thread}クラスを祖先に持ちます。
+
+//image[gang_worker_hierarchy][@<code>{GangWorker}クラスの継承関係]
+
+そのため、@<code>{GangWorker}のインスタンスは1つのスレッドと対応しています。
+
 == 並行GC
   * ConcurrentGCThread
 
