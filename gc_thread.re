@@ -69,18 +69,42 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 以上が並列実行の流れです。
 
 === AbstractWorkGangクラス
-ここからはそれぞれの登場人物の詳細を述べています。
+ここからはそれぞれの登場人物の詳細を述べていきます。
 
 @<code>{AbstractWorkGang}クラスの継承関係を@<img>{abstract_worker_gang_hierarchy}に示します。
 
 //image[abstract_worker_gang_hierarchy][@<code>{AbstractWorkGang}クラスの継承関係]
 
 @<code>{AbstractWorkGang}クラスは@<code>{WorkGang}に必要なインタフェースを定義するクラスです。
-モニタ・所属するワーカー等の@<code>{WorkGang}に必要な属性を初期化・解放する処理も実装されています。
 
-@<code>{WorkGang}クラスには実際にタスクを受け取って処理を@<code>{worker}に渡す処理が定義されています。
+//source[share/vm/utilities/workgroup.hpp]{
+119: class AbstractWorkGang: public CHeapObj {
 
-@<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
+127:   virtual void run_task(AbstractGangTask* task) = 0;
+
+139:   // 以降に定義されたデータを保護、
+140:   // また変更を通知するモニタ
+141:   Monitor*  _monitor;
+
+146:   // この集団に属するワーカーの配列。
+148:   GangWorker** _gang_workers;
+149:   // この集団に与えるタスク
+150:   AbstractGangTask* _task;
+151:   // 現在のタスクの通し番号
+152:   int _sequence_number;
+153:   // 実行ワーカー総数
+154:   int _started_workers;
+155:   // 実行完了ワーカー総数
+156:   int _finished_workers;
+//}
+
+127行目に定義されている仮想関数の@<code>{run_task()}は、タスクを@<code>{worker}に渡して実行させる処理です。
+@<code>{run_task()}の実体は子クラスの@<code>{WorkGang}クラスに定義されています。
+
+139〜156行目までは@<code>{WorkGang}に必要な属性が定義されています。
+これは@<hd>{並列GC|並列実行の流れ}で説明した「タスク情報の掲示板」のデータに相当します。
+
+@<img>{abstract_worker_gang_hierarchy}で示した@<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
 並列GCにはこの@<code>{FlexibleWorkGang}クラスがよく利用されます。
 
 === AbstractGangTaskクラス
@@ -109,7 +133,15 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 //image[gang_worker_hierarchy][@<code>{GangWorker}クラスの継承関係]
 
-そのため、@<code>{GangWorker}のインスタンスは1つのスレッドと対応しています。
+@<code>{GangWorker}のインスタンスは1つのスレッドと対応しているため、ワーカースレッドと呼ばれます。
+
+//source[share/vm/utilities/workgroup.hpp]{
+264: class GangWorker: public WorkerThread {
+
+278:   AbstractWorkGang* _gang;
+//}
+
+@<code>{GangWorker}は自分が所属する@<code>{AbstractWorkGang}をメンバ変数に持っています。
 
 == 並行GC
   * ConcurrentGCThread
