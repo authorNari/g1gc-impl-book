@@ -14,5 +14,5 @@ msc {
     FlexibleWorkGang => os [label="os::start_thread() * n"];
     os => GangWorker [label="スレッドの起動"];
     client <- FlexibleWorkGang [label="準備完了"];
-    GangWorker box GangWorker [label="それぞれのスレッドで\nrun()を実行"];
+    GangWorker box GangWorker [label="それぞれのスレッドで\nrun()を実行\nwait()で待ち状態へ"];
 }

@@ -1,13 +1,9 @@
-= GCスレッド
-
-本章ではGCに利用されるスレッドのクラスについて説明します。
-
-== 並列GC
+= GCスレッド（並列編）
 
 並列GCは複数のスレッドで同時にGCを実行します。
-この節では並列GCがどのように実装されているか見ていきます。
+本章では並列GCがどのように実装されているか見ていきます。
 
-=== 並列実行の流れ
+== 並列実行の流れ
 
 HotspotVMには複数のスレッドで並列に「何かのタスク」を実行する仕組みが実装されています。
 それを構成する主な登場人物は次のとおりです。
@@ -68,7 +64,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 以上が並列実行の流れです。
 
-=== AbstractWorkGangクラス
+== AbstractWorkGangクラス
 ここからはそれぞれの登場人物の詳細を述べていきます。
 
 @<code>{AbstractWorkGang}クラスの継承関係を@<img>{abstract_worker_gang_hierarchy}に示します。
@@ -107,7 +103,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 @<img>{abstract_worker_gang_hierarchy}で示した@<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
 並列GCにはこの@<code>{FlexibleWorkGang}クラスがよく利用されます。
 
-=== AbstractGangTaskクラス
+== AbstractGangTaskクラス
 
 @<code>{AbstractGangTask}クラスの継承関係を@<img>{abstract_gang_task_hierarchy}に示します。
 
@@ -128,7 +124,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 タスクの詳細な処理は、@<code>{G1ParTask}のようなそれぞれの子クラスで@<code>{work()}として定義します。
 クライアントは子クラスのインスタンスを@<code>{AbstractWorkGang}に渡して、並列実行してもらうわけです。
 
-=== GangWorkerクラス
+== GangWorkerクラス
 @<code>{GangWorker}クラスはタスクを実際に実行するクラスで、@<code>{Thread}クラスを祖先に持ちます。
 
 //image[gang_worker_hierarchy][@<code>{GangWorker}クラスの継承関係]
@@ -143,7 +139,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 @<code>{GangWorker}は自分が所属する@<code>{AbstractWorkGang}をメンバ変数に持っています。
 
-=== 並列GCの実行例
+== 並列GCの実行例
 では、実際のコードを読みながら@<hd>{並列GC|並列実行の流れ}の内容を振り返りましょう。
 
 @<list>{par_mark_sample_code}にクライアントとなるメインスレッドが実行する並列GCの実行例を示しました。
@@ -160,7 +156,7 @@ CMConcurrentMarkingTask marking_task(cm, cmt);
 workers->run_task(&marking_task);
 //}
 
-==== 1. ワーカの準備
+=== 1. ワーカの準備
 まず、@<list>{par_mark_sample_code}の1.に示した部分で@<code>{FlexibleWorkGang}のインスタンスを生成・初期化し、@<img>{work_gang_do_task_1}の状態にします。
 
 @<code>{FlexibleWorkGang}の生成・初期化のシーケンス図は次のとおりです。
@@ -273,7 +269,7 @@ workers->run_task(&marking_task);
 その後、268行目のループ内のはじめにタスクがあるかチェックします。
 スレッド起動時にはタスクがないことが多いので、大抵はタスクがなく、284行目で@<code>{wait()}を呼び出します。
 
-==== 2. タスクの生成
+=== 2. タスクの生成
 ワーカーの準備ができたら、次に実行させるタスクを生成します。
 
 @<list>{par_mark_sample_code}の2.の部分を参照してください。
@@ -302,13 +298,3 @@ workers->run_task(&marking_task);
 
 1095〜1153行目が@<code>{CMConcurrentMarkingTask}が実行するタスクの内容です。
 生成されたそれぞれの@<code>{GangWorker}はこの@<code>{work()}を呼び出すことになります。
-
-=== TODO 並列GCの実行例
-
-並列マーキング実行時のサンプルコードを@<list>{par_mark_sample_code}に示します。
-
-== 並行GC
-  * ConcurrentGCThread
-
-== セーフポイント
-  * XXOperationの説明
