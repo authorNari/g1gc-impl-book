@@ -1,0 +1,18 @@
+msc {
+    hscale = "1.6";
+
+    client,FlexibleWorkGang,GangWorker,os;
+
+    client => FlexibleWorkGang [label="new FlexibleWorkGang()"];
+    FlexibleWorkGang box FlexibleWorkGang [label="モニタ生成など"];
+    client <- FlexibleWorkGang [label="FlexibleWorkGangのインスタンス"];
+    client => FlexibleWorkGang [label="initialize_workers()"];
+    FlexibleWorkGang => FlexibleWorkGang [label="allocate_worker() * n"];
+    FlexibleWorkGang => GangWorker [label="new GangWorker() * n"];
+    FlexibleWorkGang => os [label="os::create_thread() * n"];
+    os => GangWorker [label="スレッドの生成"];
+    FlexibleWorkGang => os [label="os::start_thread() * n"];
+    os => GangWorker [label="スレッドの起動"];
+    client <- FlexibleWorkGang [label="準備完了"];
+    GangWorker box GangWorker [label="それぞれのスレッドで\nrun()を実行"];
+}

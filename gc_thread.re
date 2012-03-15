@@ -143,6 +143,131 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 @<code>{GangWorker}は自分が所属する@<code>{AbstractWorkGang}をメンバ変数に持っています。
 
+=== 並列実行の準備
+では、実際のコードを読みながら@<hd>{並列GC|並列実行の流れ}の内容を振り返りましょう。
+まず、@<code>{FlexibleWorkGang}のインスタンスを生成・初期化し、@<img>{work_gang_do_task_1}の状態にします。
+
+@<code>{FlexibleWorkGang}の生成・初期化のシーケンス図は次のとおりです。
+
+//image[workgang_initialize_sequence][@<code>{WorkGang}の生成・初期化のシーケンス図]
+
+上から順番に見ていきましょう。
+最初は@<code>{AbstractWorkGang}のイニシャライザです。
+
+//source[share/vm/utilities/workgroup.cpp]{
+33: AbstractWorkGang::AbstractWorkGang(const char* name,
+34:                                    bool  are_GC_task_threads,
+35:                                    bool  are_ConcurrentGC_threads) :
+36:   _name(name),
+37:   _are_GC_task_threads(are_GC_task_threads),
+38:   _are_ConcurrentGC_threads(are_ConcurrentGC_threads) {
+
+
+     _monitor = new Monitor(Mutex::leaf,
+                            "WorkGroup monitor",
+                            are_GC_task_threads);
+
+48:   _terminate = false;
+49:   _task = NULL;
+50:   _sequence_number = 0;
+51:   _started_workers = 0;
+52:   _finished_workers = 0;
+53: }
+//}
+
+上記のコードから、モニタの初期化とデータの初期化がおこなわれることがわかれば充分です。
+それ以外の箇所はあまり関係ないので無視しましょう。
+
+@<code>{AbstractWorkGang}クラスのインスタンスが生成された後、@<code>{initialize_workers()}メンバ関数でワーカーの初期化をします。
+
+//source[share/vm/utilities/workgroup.cpp]{
+74: bool WorkGang::initialize_workers() {
+
+81:   _gang_workers = NEW_C_HEAP_ARRAY(GangWorker*, total_workers());
+
+92:   for (int worker = 0; worker < total_workers(); worker += 1) {
+93:     GangWorker* new_worker = allocate_worker(worker);
+95:     _gang_workers[worker] = new_worker;
+96:     if (new_worker == NULL || !os::create_thread(new_worker, worker_type)) {
+          /* 省略: エラー処理 */
+98:       return false;
+99:     }
+101:       os::start_thread(new_worker);
+103:   }
+104:   return true;
+105: }
+//}
+
+81行目で生成したいワーカー分の配列を作成し、92〜103行目でワーカーを生成します。
+
+93行目で@<code>{allocate_worker()}を使って@<code>{GangWorker}を生成します。
+96行目でワーカースレッドを生成し、101行目でワーカースレッドの処理を開始します。
+
+@<code>{allocate_worker()}のソースコードは以下の通りです。
+
+//source[share/vm/utilities/workgroup.cpp]{
+64: GangWorker* WorkGang::allocate_worker(int which) {
+65:   GangWorker* new_worker = new GangWorker(this, which);
+66:   return new_worker;
+67: }
+//}
+
+@<code>{this}（自分の所属する@<code>{AbstractWorkGang}）と、ワーカーの識別番号を引数にして、@<code>{GangWorker}のインスタンスを作っています。
+
+さて、@<code>{initialize_workers()}内の@<code>{os::start_thread()}によって、スレッドの処理は実行しています。
+@<code>{GangWorker}は@<code>{Thread}を継承したクラスです。
+スレッドは処理を開始すると子クラスの@<code>{run()}メソッドを呼び出すのでしたね。
+
+//source[share/vm/utilities/workgroup.cpp]{
+222: void GangWorker::run() {
+
+224:   loop();
+225: }
+//}
+
+@<code>{run()}では@<code>{loop()}を呼び出しています。
+ここでは@<code>{GangWorker}がモニタの待合室に入る部分のみに絞って解説したいと思います。
+
+//source[share/vm/utilities/workgroup.cpp]{
+241: void GangWorker::loop() {
+243:   Monitor* gang_monitor = gang()->monitor();
+247:     {
+
+249:       MutexLocker ml(gang_monitor);
+
+268:       for ( ; /* break or return */; ) {
+             /* 
+              * 省略: タスクがあるかチェック
+              *       あれば break でループを抜ける
+              */
+
+283:         // ロックを解除して待合室に入る
+284:         gang_monitor->wait(/* no_safepoint_check */ true);
+
+             /* 省略: 待合室から出た後の処理 */
+300:       }
+
+302:     }
+
+323: }
+//}
+
+まず、243行目で自分の所属する@<code>{AbstractWorkGang}のモニタを取得します。
+249行目でロックを掛けてモニタに入ります。
+その後、268行目のループ内のはじめにタスクがあるかチェックします。
+スレッド起動時にはタスクがないことが多いので、大抵はタスクがなく、284行目で@<code>{wait()}を呼び出します。
+
+=== TODO 並列GCの実行例
+
+並列マーキング実行時のサンプルコードを@<list>{par_mark_sample_code}に示します。
+
+//listnum[par_mark_sample_code][並列GC実行例のサンプルコード]{
+workers = new FlexibleWorkGang("Parallel GC Threads", 8, true, false);
+workers->initialize_workers();
+CMConcurrentMarkingTask markingTask(cm, cmt);
+workers->run_task(&cleanup_task);
+//}
+
 == 並行GC
   * ConcurrentGCThread
 
