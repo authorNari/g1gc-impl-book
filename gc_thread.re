@@ -143,9 +143,25 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 @<code>{GangWorker}は自分が所属する@<code>{AbstractWorkGang}をメンバ変数に持っています。
 
-=== 並列実行の準備
+=== 並列GCの実行例
 では、実際のコードを読みながら@<hd>{並列GC|並列実行の流れ}の内容を振り返りましょう。
-まず、@<code>{FlexibleWorkGang}のインスタンスを生成・初期化し、@<img>{work_gang_do_task_1}の状態にします。
+
+@<list>{par_mark_sample_code}にクライアントとなるメインスレッドが実行する並列GCの実行例を示しました。
+
+//listnum[par_mark_sample_code][並列GC実行例のサンプルコード]{
+/* 1. ワーカーの準備 */
+workers = new FlexibleWorkGang("Parallel GC Threads", 8, true, false);
+workers->initialize_workers();
+
+/* 2. タスクの生成 */
+CMConcurrentMarkingTask marking_task(cm, cmt);
+
+/* 3. タスクの並列実行 */
+workers->run_task(&marking_task);
+//}
+
+==== 1. ワーカの準備
+まず、@<list>{par_mark_sample_code}の1.に示した部分で@<code>{FlexibleWorkGang}のインスタンスを生成・初期化し、@<img>{work_gang_do_task_1}の状態にします。
 
 @<code>{FlexibleWorkGang}の生成・初期化のシーケンス図は次のとおりです。
 
@@ -257,16 +273,39 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 その後、268行目のループ内のはじめにタスクがあるかチェックします。
 スレッド起動時にはタスクがないことが多いので、大抵はタスクがなく、284行目で@<code>{wait()}を呼び出します。
 
+==== 2. タスクの生成
+ワーカーの準備ができたら、次に実行させるタスクを生成します。
+
+@<list>{par_mark_sample_code}の2.の部分を参照してください。
+ここでは@<code>{AbstractGangTask}を継承した@<code>{CMConcurrentMarkingTask}という、G1GCのマーキングタスクを実例として取り上げています。
+
+//source[share/vm/gc_implementation/g1/concurrentMark.cpp]{
+1089: class CMConcurrentMarkingTask: public AbstractGangTask {
+1090: private:
+1091:   ConcurrentMark*       _cm;
+1092:   ConcurrentMarkThread* _cmt;
+
+1094: public:
+1095:   void work(int worker_i) {
+
+        /* 省略: マーキング処理 */
+
+1153:   }
+
+1155:   CMConcurrentMarkingTask(ConcurrentMark* cm,
+1156:                           ConcurrentMarkThread* cmt) :
+1157:       AbstractGangTask("Concurrent Mark"), _cm(cm), _cmt(cmt) { }
+//}
+
+1155〜1157行目に定義されている@<code>{CMConcurrentMarkingTask}のイニシャライザでは、@<code>{work()}を実行するのに必要な変数を引数として受け取るようにしています。
+@<code>{work()}の引数は決められているので、それぞれのタスク実行に必要な情報はメンバ変数として持たなければなりません。
+
+1095〜1153行目が@<code>{CMConcurrentMarkingTask}が実行するタスクの内容です。
+生成されたそれぞれの@<code>{GangWorker}はこの@<code>{work()}を呼び出すことになります。
+
 === TODO 並列GCの実行例
 
 並列マーキング実行時のサンプルコードを@<list>{par_mark_sample_code}に示します。
-
-//listnum[par_mark_sample_code][並列GC実行例のサンプルコード]{
-workers = new FlexibleWorkGang("Parallel GC Threads", 8, true, false);
-workers->initialize_workers();
-CMConcurrentMarkingTask markingTask(cm, cmt);
-workers->run_task(&cleanup_task);
-//}
 
 == 並行GC
   * ConcurrentGCThread
