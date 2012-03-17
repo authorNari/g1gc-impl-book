@@ -271,7 +271,6 @@ workers->run_task(&marking_task);
 
 === 2. タスクの生成
 ワーカーの準備ができたら、次に実行させるタスクを生成します。
-
 @<list>{par_mark_sample_code}の2.の部分を参照してください。
 ここでは@<code>{AbstractGangTask}を継承した@<code>{CMConcurrentMarkingTask}という、G1GCのマーキングタスクを実例として取り上げています。
 
@@ -298,3 +297,112 @@ workers->run_task(&marking_task);
 
 1095〜1153行目が@<code>{CMConcurrentMarkingTask}が実行するタスクの内容です。
 生成されたそれぞれの@<code>{GangWorker}はこの@<code>{work()}を呼び出すことになります。
+
+=== 3. タスクの並列実行
+最後にタスクをワーカーに渡します。
+
+@<list>{par_mark_sample_code}の3.の部分では@<code>{FlexibleWorkGang}の@<code>{run_task()}を呼び出しています。
+
+//source[share/vm/utilities/workgroup.cpp:run_task()前半]{
+129: void WorkGang::run_task(AbstractGangTask* task) {
+
+132:   MutexLockerEx ml(monitor(), Mutex::_no_safepoint_check_flag);
+
+139:   _task = task;
+140:   _sequence_number += 1;
+141:   _started_workers = 0;
+142:   _finished_workers = 0;
+
+//}
+
+タスクを引数に受け取った@<code>{run_task()}は、まず132行目でモニタのロックを取ります。
+その後、139行目でタスク情報を書き込み、140〜142行目でその他の情報も更新します。
+これは@<img>{work_gang_do_task_2}と対応する部分です。
+
+//source[share/vm/utilities/workgroup.cpp:run_task()後半]{
+
+144:   monitor()->notify_all();
+
+146:   while (finished_workers() < total_workers()) {
+
+152:     monitor()->wait(/* no_safepoint_check */ true);
+153:   }
+154:   _task = NULL;
+
+160: }
+//}
+
+その後、144行目でモニタの待合室にいるワーカーを呼び出します。
+146〜153行目のwhileループの終了条件は「すべてのワーカーがタスクを終了すること」です。
+条件に合わない場合、152行目でクライアントは@<code>{wait()}し続けます。
+この部分は@<img>{work_gang_do_task_5}と対応しています。
+
+それぞれのワーカーは@<code>{GangWorker}の@<code>{loop()}で@<code>{wait()}を呼び出し、待っていました。
+もう少し@<code>{loop()}を詳細に見ていきましょう。
+
+//source[share/vm/utilities/workgroup.cpp:loop()前半]{
+241: void GangWorker::loop() {
+242:   int previous_sequence_number = 0;
+243:   Monitor* gang_monitor = gang()->monitor();
+244:   for ( ; /* タスク実行ループ */; ) {
+245:     WorkData data;
+246:     int part;
+247:     {
+249:       MutexLocker ml(gang_monitor);
+
+268:       for ( ; /* タスク取得ループ */; ) {
+
+276:         if ((data.task() != NULL) &&
+277:             (data.sequence_number() != previous_sequence_number)) {
+278:           gang()->internal_note_start();
+279:           gang_monitor->notify_all();
+280:           part = gang()->started_workers() - 1;
+281:           break;
+282:         }
+
+284:         gang_monitor->wait(/* no_safepoint_check */ true);
+285:         gang()->internal_worker_poll(&data);
+300:       }
+
+302:     }
+
+308:     data.task()->work(part);
+//}
+
+242行目の@<code>{previous_sequence_number}は名前の通り、以前のタスクの通し番号を記録してローカル変数です。
+
+244行目からの@<code>{for}ループが一度回るたびにワーカーは1つのタスク実行をこなします。
+245行目の@<code>{WorkData}は@<code>{WorkerGang}にあるタスクの情報（掲示板の情報）を記録するローカル変数です。
+246行目の@<code>{park}はワーカーの順番を記録するローカル変数です。
+これらはタスク実行ループが一回終了するたびに破棄されます。
+
+268行目からの@<code>{for}ループは@<code>{WorkerGang}からタスクを取得するループです。
+通常は284行目で待っている状態で止まっていて、@<code>{notify_all()}で動き出します。
+動き出すと、285行目の@<code>{internal_worker_poll()}でローカル変数にタスクの情報をコピーします。
+情報を取得したら、276,277行目の条件分岐で実行すべきタスクがあるかどうかチェックします。
+チェックに合格したら、278行目で自分が起動しことを@<code>{GangWorker}に書きこみ、279行目で@<code>{notify_all()}して、ワーカーの順番を@<code>{part}に格納してからループを脱出します。
+ループを抜けるときに一緒にモニタをアンロックしていることに注意してください。
+その後、308行目でタスクの@<code>{work()}を@<code>{part}を引数として呼び出しています。
+ここまで部分は@<img>{work_gang_do_task_3}と対応しています。
+
+//source[share/vm/utilities/workgroup.cpp:loop()後半]{
+309:     {
+
+314:       // ロック
+315:       MutexLocker ml(gang_monitor);
+316:       gang()->internal_note_finish();
+317:       // 終了したことを伝える
+318:       gang_monitor->notify_all();
+
+320:     }
+321:     previous_sequence_number = data.sequence_number();
+322:   }
+323: }
+//}
+
+次にタスクの実行が終わると、再度ロックを取って実行完了したことを@<code>{GangWorker}に書き込みます。
+その後、@<code>{notify_all()}して、@<code>{previous_sequence_number}に完了したタスクの通し番号をコピーし、@<code>{for}ループの先頭に戻ります。
+ここまで部分は@<img>{work_gang_do_task_4}と対応しています。
+
+これでワーカーのタスク実行は終了です。
+すべてのワーカーのタスク実行が完了すると、クライアントは@<code>{GangWorker}の情報を見て完了を検知し、@<code>{run_task()}の実行が完了します。
