@@ -15,6 +15,7 @@
  * 5.[オブジェクト構造](http://www.narihiro.info/g1gc-impl-book/object.html)
  * 6.[HotspotVMのスレッド管理](http://www.narihiro.info/g1gc-impl-book/vm_thread.html)
  * 7.[スレッドの排他制御](http://www.narihiro.info/g1gc-impl-book/lock.html)
+ * 8.[GCスレッド（並列編）](http://www.narihiro.info/g1gc-impl-book/gc_thread_par.html)
  * x.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
