@@ -164,7 +164,7 @@ workers->run_task(&marking_task);
 //image[workgang_initialize_sequence][@<code>{WorkGang}の生成・初期化のシーケンス図]
 
 上から順番に見ていきましょう。
-最初は@<code>{AbstractWorkGang}のイニシャライザです。
+最初は@<code>{AbstractWorkGang}のコンストラクタです。
 
 //source[share/vm/utilities/workgroup.cpp]{
 33: AbstractWorkGang::AbstractWorkGang(const char* name,
@@ -292,7 +292,7 @@ workers->run_task(&marking_task);
 1157:       AbstractGangTask("Concurrent Mark"), _cm(cm), _cmt(cmt) { }
 //}
 
-1155〜1157行目に定義されている@<code>{CMConcurrentMarkingTask}のイニシャライザでは、@<code>{work()}を実行するのに必要な変数を引数として受け取るようにしています。
+1155〜1157行目に定義されている@<code>{CMConcurrentMarkingTask}のコンストラクタでは、@<code>{work()}を実行するのに必要な変数を引数として受け取るようにしています。
 @<code>{work()}の引数は決められているので、それぞれのタスク実行に必要な情報はメンバ変数として持たなければなりません。
 
 1095〜1153行目が@<code>{CMConcurrentMarkingTask}が実行するタスクの内容です。
