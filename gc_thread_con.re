@@ -1,6 +1,6 @@
 = GCスレッド（並行編）
 
-本章では並列GCがどのように実装されているかを説明します。
+本章では並行GCの説明とそれにまつわるトピックを紹介します。
 
 == ConcurrentGCThreadクラス
 並列GCは@<code>{CuncurrentGCThread}クラスを継承したクラスで実装されます。
@@ -113,7 +113,7 @@
 
 == セーフポイント
 Hotspotには@<b>{セーフポイント}と呼ばれる謎な用語があります。
-よく「システム全体の『安全な状態』を『セーフポイント』と呼ぶ」などと説明がされがちですが、正直この説明では安全な状態が具体的に何であるか理解できません。
+よく「システム全体の『安全な状態』を『セーフポイント』と呼ぶ」などと説明ますが、正直この説明では安全な状態が具体的に何であるか理解できません。
 実は、セーフポイントはGCのルートとかなり密接な関係にあり、GCをよく知っていないと説明できない用語なのです。
 そのため、上記の奥歯にものが挟まったような説明になりがちです。
 
@@ -182,5 +182,80 @@ Javaスレッドだけがルートを持っているわけではありません�
 つまり、セーフポイントでは@<code>{SuspendableThreadSet}を使って並行GCスレッドの動作を制御しています。
 並行GCスレッド群はセーフポイントになると、ルートを安全に列挙できる状態で@<code>{yield()}を呼び出し、自分自身を停止するわけです。
 
-== VMオペレーション
-  * XXOperationの説明
+== VMスレッド
+HotspotVMにはVMスレッドという特別なスレッドがたった1つだけ動いています。
+VMスレッドの役割は「VMオペレーション」というVM全体に関わる処理の要求を受け取り、VMスレッド上で実行するという点です。
+
+=== VMスレッドとは？
+VMスレッドは@<code>{VMTread}クラスで定義されたスレッドです。
+@<code>{VMThread}の祖先にはもちろん@<code>{Thread}クラスがいます。
+VMスレッドはJavaを起動してすぐに生成・起動します。
+
+//source[share/vm/runtime/vmThread.hpp]{
+101: class VMThread: public NamedThread {
+
+       // VMオペレーションの実行
+128:   static void execute(VM_Operation* op);
+//}
+
+VMスレッドはVMオペレーションを受け付けるキューを内部に保持しています。
+他スレッドは128行目の@<code>{execute()}静的メンバ関数をVMオペレーションを引数に呼び出し、内部のキューに追加させます。
+VMスレッドはキューにVMオペレーションが追加されたことを検知して、自身のスレッドでVMオペレーションとして渡された処理を実施します。
+
+=== VMオペレーション
+VMオペレーションの代表的なものとしては、スタックトレースの取得や、VMの終了、VMヒープのダンプがあります。
+GCにもっとも関係のあるオペレーションはいわゆる「Stop-the-World」で実行しなければならない停止処理です。
+G1GCで言うところの退避や、並行マーキングの停止処理はVMオペレーションとしてVMスレッドに実行してもらいます。
+また、Javaで明示的にフルGCを実行した場合も停止処理ですのでVMオペレーションとなります。
+
+VMオペレーションはセーフポイントで実行する必要があるものがほとんどです。
+そのためほとんどのVMオペレーション実行時には、VMスレッドは@<code>{SafepointSynchronize::begin()}を使ってセーフポイントの状態にもっていきます。
+
+=== VM_Operationクラス
+@<code>{VM_Operation}クラスがVMオペレーションのインターフェースを定義するクラスです。
+@<code>{VM_Operation}クラスの継承関係を@<img>{vm_operation_hierarchy}に示します。
+
+//image[vm_operation_hierarchy][@<code>{VM_Operation}クラスの継承関係]
+
+@<code>{VM_Operation}クラスのインターフェースを見てみましょう。
+
+//source[share/vm/runtime/vm_operations.hpp]{
+98: class VM_Operation: public CHeapObj {
+
+       // VMスレッドが呼び出すメソッド
+135:   void evaluate();
+
+144:   virtual void doit()                            = 0;
+145:   virtual bool doit_prologue()                   { return true; };
+146:   virtual void doit_epilogue()                   {};
+//}
+
+VMスレッドは135行目の@<code>{evaluate()}メンバ関数を呼び出し、要求されたオペレーションを実行します。
+@<code>{evaluate()}内部では単純に144行目の@<code>{doit()}を呼び出すだけです。
+
+144〜146行目には仮想関数が定義されています。
+@<code>{doit()}はオペレーションとしてVMスレッド上で実行される関数です。
+@<code>{doit_prologue()}は名前の通り、@<code>{doit()}を実行する前の準備として実行されます。
+@<code>{doit_prologue()}は真偽値を返す決まりになっており、@<code>{false}を返した場合は@<code>{doit()}を実行しません。
+@<code>{doit_epilogue()}は@<code>{doit()}が終わった後に実行される関数です。
+
+@<code>{VM_Operation}を継承したクラスでは上記の3つのメンバ関数に対し、オペレーションとしての処理の内容を記述して行きます。
+
+=== VMオペレーションの実行例
+実際のVMオペレーション実行例を見てみましょう。
+ここではG1GCの並行マーキングの初期マークフェーズを見たいと思います。
+初期マークフェーズは停止処理ですので、VMオペレーションとして実行されます。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
+134:         CMCheckpointRootsInitialClosure init_cl(_cm);
+135:         strcpy(verbose_str, "GC initial-mark");
+136:         VM_CGC_Operation op(&init_cl, verbose_str);
+137:         VMThread::execute(&op);
+//}
+
+136行目で@<code>{VM_CGC_Operation}をスタック上に生成し、@<code>{execute()}に渡してします。
+VMオペレーションのコンストラクタにはそれぞれのオペレーション内で利用するデータを渡します。
+この場合は@<code>{CMCheckpointRootsInitialClosure}と文字列だったようですね。
+
+@<code>{execute()}を呼び出したスレッドはVMオペレーションが終了するまでブロックされます。
+VMオペレーションの種類によってはブロックされないこともありますが、それはとても稀な例と考えていいでしょう。
