@@ -22,9 +22,9 @@
 
 以下から（ある時点で）最新のebookをダウンロードできます。
 
- * [徹底解剖「G1GC」実装編-20111225.epub](http://www.narihiro.info/ebook/g1gc-impl-20120330.epub)
- * [徹底解剖「G1GC」実装編-20111225.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120330.mobi)
- * [徹底解剖「G1GC」実装編-20111225.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120330.pdf)
+ * [徹底解剖「G1GC」実装編-20120330.epub](http://www.narihiro.info/ebook/g1gc-impl-20120330.epub)
+ * [徹底解剖「G1GC」実装編-20120330.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120330.mobi)
+ * [徹底解剖「G1GC」実装編-20120330.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120330.pdf)
 
 ## 「ある程度寄付が溜まったら本気出す」
 **目標に達しましたので寄付の受付を終了しています**
