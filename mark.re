@@ -33,13 +33,43 @@
 5.はマークフェーズの後始末をして次回のマークフェーズに備えるフェーズです。
 このフェーズもセーフポイントで実行され、かつ複数のスレッドで並列に実行されます。
 
+=== ConcurrentMarkクラス
+並行マーキングの各処理は@<code>{ConcurrentMark}というクラスに実装されています。
+@<code>{ConcurrentMark}クラスの定義を簡単に見てみましょう。
+
+//source[share/vm/gc_implementation/g1/concurrentMark.hpp]{
+359: class ConcurrentMark: public CHeapObj {
+
+375:   ConcurrentMarkThread* _cmThread;
+376:   G1CollectedHeap*      _g1h;
+377:   size_t                _parallel_marking_threads;
+
+392:   CMBitMap                _markBitMap1;
+393:   CMBitMap                _markBitMap2;
+394:   CMBitMapRO*             _prevMarkBitMap;
+395:   CMBitMap*               _nextMarkBitMap;
+//}
+
+375行目の@<code>{_cmThread}には並行マーキングスレッドを保持し、376行目の@<code>{_g1h}はG1GC用のVMヒープを保持します。
+
+377行目の@<code>{_parallel_marking_threads}には並列マーキングで使用するスレッド数が格納されます。
+
+392・393行目にはVMヒープに対応したビットマップの実体が割り当てられます。
+@<code>{CMBitMap}クラスについてはTODOで詳しく説明します。
+
+394行目の@<code>{_prevMarkBitMap}は@<code>{_markBitMap1}、もしくは@<code>{_markBitMap2}のいずれかを指しています。
+395行目の@<code>{_nextMarkBitMap}も同じです。
+そして、@<code>{_prevMarkBitMap}が指す方がVMヒープ全体の@<code>{prev}ビットマップであり、@<code>{_nextMarkBitMap}が指す方が@<code>{next}ビットマップになります。
+
 === ConcurrentMarkThreadクラス
-並列マーキングのスレッドは@<code>{ConcurrentMarkThread}クラスで実装されています。
+並行マーキングスレッドは@<code>{ConcurrentMarkThread}クラスに実装されています。
 
 
 === 並行マーキングスレッド実行タイミング
 
 == ステップ1―初期マークフェーズ
+
+=== CMBitMapに対するマーク
 
 == ステップ2―並行マークフェーズ
 
