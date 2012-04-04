@@ -33,6 +33,8 @@
 5.はマークフェーズの後始末をして次回のマークフェーズに備えるフェーズです。
 このフェーズもセーフポイントで実行され、かつ複数のスレッドで並列に実行されます。
 
+並行マーキングは上記の5つのフェーズを1サイクルとして、必要なときに繰り返し実行します。
+
 === ConcurrentMarkクラス
 並行マーキングの各処理は@<code>{ConcurrentMark}というクラスに実装されています。
 @<code>{ConcurrentMark}クラスの定義を簡単に見てみましょう。
@@ -59,13 +61,28 @@
 
 394行目の@<code>{_prevMarkBitMap}は@<code>{_markBitMap1}、もしくは@<code>{_markBitMap2}のいずれかを指しています。
 395行目の@<code>{_nextMarkBitMap}も同じです。
-そして、@<code>{_prevMarkBitMap}が指す方がVMヒープ全体の@<code>{prev}ビットマップであり、@<code>{_nextMarkBitMap}が指す方が@<code>{next}ビットマップになります。
+そして、@<code>{_prevMarkBitMap}が指す方がVMヒープ全体の@<code>{prev}ビットマップ、@<code>{_nextMarkBitMap}が指す方が@<code>{next}ビットマップになります。
 
 === ConcurrentMarkThreadクラス
 並行マーキングスレッドは@<code>{ConcurrentMarkThread}クラスに実装されています。
+このクラスは@<code>{CuncurrentGCThread}クラスを親に持っており、インスタンスを作った段階でスレッドが起動します。
 
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.hpp]{
+36: class ConcurrentMarkThread: public ConcurrentGCThread {
 
-=== 並行マーキングスレッド実行タイミング
+49:   ConcurrentMark*                  _cm;
+50:   volatile bool                    _started;
+51:   volatile bool                    _in_progress;
+//}
+
+@<code>{ConcurrentMarkThread}は49行目にあるように、メンバ変数として@<code>{ConcurrentMark}を持ちます。
+
+50行目の@<code>{_started}は並行マーキングが実行開始状態にあるかを示すフラグです。
+51行目の@<code>{_in_progress}は並行マーキングが実際に実行中であるかを示すフラグです。
+
+=== 並行マーキングの実行タイミング
+
+=== 並行マーキングスレッドのrun()
 
 == ステップ1―初期マークフェーズ
 
