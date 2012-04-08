@@ -220,12 +220,114 @@ HotspotVMでGCのルートとなるものを大まかにリストアップしま
  * 各スレッド固有の情報（スタックフレームなど）
  * 組み込みクラス
  * JNIのハンドラ
- * パーマネント領域から他の領域に対する参照の記憶集合
+ * パーマネント領域から他の領域に対する参照
  * 退避用記憶集合
+ * etc...
 
-上記以外にも様々なものがルートとして扱われますが、あまり面白い部分ではないので省略します。
+初期マークフェーズでは上記をルートとして処理を進めます。
 
-=== SubTasksDoneクラス
+=== ルートスキャンの枠組み
+HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メンバ関数が@<code>{SharedHeap}クラスに準備されています。
+
+//source[share/vm/memory/sharedHeap.hpp]{
+219:   void process_strong_roots(bool activate_scope,
+220:                             bool collecting_perm_gen,
+221:                             ScanningOption so,
+222:                             OopClosure* roots,
+223:                             CodeBlobClosure* code_roots,
+224:                             OopsInGenClosure* perm_blk);
+//}
+
+このメソッドの説明すべき役割は以下の2つです。
+
+ 1. ルートを引数に@<code>{roots}の@<code>{do_oop()}を呼び出す
+ 2. 複数のスレッドで処理する場合はタスクを分割する
+
+まず、1.から説明していきましょう。
+@<code>{OopClosure}クラスはルートのイテレーションに利用されるクラスです。
+
+//source[share/vm/memory/iterator.hpp]{
+56: class OopClosure : public Closure {
+
+61:   virtual void do_oop(oop* o) = 0;
+//}
+
+クラスには@<code>{do_oop()}という仮想関数が定義されています。
+この@<code>{do_oop()}はHotspotVM上のさまざまなルートを引数にして呼び出されます。
+@<code>{do_oop()}の実体は@<code>{OopClosure}のサブクラスで実装します。
+
+では、実際にどのように@<code>{process_strong_roots()}で利用されているか見てみましょう。
+
+//source[share/vm/memory/sharedHeap.cpp]{
+138: void SharedHeap::process_strong_roots(bool activate_scope,
+                                           ...) {
+148:     Universe::oops_do(roots);
+149:     ReferenceProcessor::oops_do(roots);
+
+155:     JNIHandles::oops_do(roots);
+
+158:     Threads::possibly_parallel_oops_do(roots, code_roots);
+
+163:     ObjectSynchronizer::oops_do(roots);
+
+165:     FlatProfiler::oops_do(roots);
+
+167:     Management::oops_do(roots);
+
+169:     JvmtiExport::oops_do(roots);
+
+         /* ... 以下略 ... */
+//}
+
+各クラスの@<code>{oops_do()}という静的メンバ関数に@<code>{roots}を渡しているのがわかりますね。
+@<code>{oops_do()}は自クラスが管理するオブジェクトに対する参照（ルート）に対して、@<code>{do_oop()}を呼び出すものです。
+
+@<img>{roots_iteration}に処理のイメージを示します。
+
+//image[roots_iteration][各クラスが管理するルートに対して、@<code>{OopClosure}のサブクラスに実装された@<code>{do_oop()}を呼び出す]
+
+上記のようにルートをスキャンする枠組みだけが用意されており、実際に何をやるかは呼び出し側で定義できるわけですね。
+
+次に2.についてです。
+@<code>{process_strong_roots()}はルートスキャンを適当な大きさのタスクに分割して、各スレッドが早いもの勝ちでそれぞれのタスクを実行させることで並列実行時に性能がでるようにしています。
+再度、@<code>{process_strong_roots()}内を見てみましょう。
+
+//source[share/vm/memory/sharedHeap.cpp]{
+138: void SharedHeap::process_strong_roots(bool activate_scope,
+                                           ...) {
+147:   if (!_process_strong_tasks->is_task_claimed(SH_PS_Universe_oops_do)) {
+148:     Universe::oops_do(roots);
+149:     ReferenceProcessor::oops_do(roots);
+151:     perm_gen()->ref_processor()->weak_oops_do(roots);
+152:   }
+154:   if (!_process_strong_tasks->is_task_claimed(SH_PS_JNIHandles_oops_do))
+155:     JNIHandles::oops_do(roots);
+
+162:   if (!_process_strong_tasks->is_task_claimed(
+             SH_PS_ObjectSynchronizer_oops_do))
+163:     ObjectSynchronizer::oops_do(roots);
+164:   if (!_process_strong_tasks->is_task_claimed(SH_PS_FlatProfiler_oops_do))
+165:     FlatProfiler::oops_do(roots);
+166:   if (!_process_strong_tasks->is_task_claimed(SH_PS_Management_oops_do))
+167:     Management::oops_do(roots);
+168:   if (!_process_strong_tasks->is_task_claimed(SH_PS_jvmti_oops_do))
+169:     JvmtiExport::oops_do(roots);
+
+         /* ... 他のルートスキャン ... */
+
+221:   _process_strong_tasks->all_tasks_completed();
+222: }
+//}
+
+@<code>{oops_do()}を呼び出す前に、@<code>{_process_strong_tasks}メンバ変数の@<code>{is_task_claimed()}を呼び出しているのがわかります。
+@<code>{_process_strong_tasks}は@<code>{SubTasksDone}クラスのインスタンスです。
+
+@<code>{is_task_claimed()}の役割は、引数に受けっとた識別子に対応するタスクがすでに他スレッドのものであるかを確認することです。
+もし、他スレッドのものであれば@<code>{true}を返し、そのタスクは実行しないようにします。
+誰のものでなければ、呼び出したスレッドのタスクにしてから@<code>{false}を返します。
+@<code>{is_task_claimed()}は内部でCAS命令を使って不可分に実行されるため、複数のスレッドで同時に呼び出されても問題ありません。
+
+そのため、@<code>{process_strong_roots()}を並列実行した場合は、各スレッドが早いものがちでif文の中にあるタスクを実行していきます。
 
 === CMBitMapに対するマーク
 
