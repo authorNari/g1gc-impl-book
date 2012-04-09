@@ -392,7 +392,24 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 また、4708行目で@<code>{OopClosure}を更に@<code>{BufferingOopClosure}でラップしています。
 このクラスの@<code>{do_oop()}は、引数に受け取った@<code>{oop}を一定量バッファに貯めこみ、満タンになったあとに一気に処理します。
 これには、ルートを探索するコストとルートをスキャンするコストを分離して計測するという狙いがあります。
-これはのちの TODO:計測の章 で後述します。
+詳しくは TODO:計測の章 で後述します。
+
+=== ルートスキャン時のマーク
+ルートスキャンで利用する@<code>{G1ParScanAndMarkExtRootClosure}クラスの@<code>{do_oop()}は、最終的に@<code>{ConcurrentMark}の@<code>{grayRoot()}メンバ関数を呼び出します。
+
+//source[share/vm/gc_implementation/g1/concurrentMark.cpp]{
+1005: void ConcurrentMark::grayRoot(oop p) {
+1006:   HeapWord* addr = (HeapWord*) p;
+
+1015:   if (!_nextMarkBitMap->isMarked(addr))
+1016:     _nextMarkBitMap->parMark(addr);
+1017: }
+//}
+
+@<code>{grayRoot()}の引数@<code>{p}はコピー先のアドレスを受け取ります。
+1015行目でマークがついていないことをチェックし、1016行目で@<code>{next}ビットマップにマークします。
+
+上記の@<code>{grayRoot()}がすべてのルートに対して呼び出されれば、初期マークフェーズは終了です。
 
 == ステップ2―並行マークフェーズ
 
