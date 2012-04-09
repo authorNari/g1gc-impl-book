@@ -213,6 +213,7 @@ abortになるほとんどの理由は並行マーキングのサイクル実行
 == ステップ1―初期マークフェーズ
 初期マークフェーズはルートから直接参照可能なオブジェクトにマークを付ける処理です。
 このフェーズは前節で述べたとおり、退避のルートスキャンと同じタイミングで実施されます。
+退避については TODO:退避の章 で後述しますので、ここではマーキングに関連する部分のみを取り上げます。
 
 === ルート
 HotspotVMでGCのルートとなるものを大まかにリストアップしました。
@@ -288,7 +289,7 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 
 上記のようにルートをスキャンする枠組みだけが用意されており、実際に何をやるかは呼び出し側で定義できるわけですね。
 
-次に2.についてです。
+次に2.ついて説明しましょう。
 @<code>{process_strong_roots()}はルートスキャンを適当な大きさのタスクに分割して、各スレッドが早いもの勝ちでそれぞれのタスクを実行させることで並列実行時に性能がでるようにしています。
 再度、@<code>{process_strong_roots()}内を見てみましょう。
 
@@ -322,14 +323,76 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 @<code>{oops_do()}を呼び出す前に、@<code>{_process_strong_tasks}メンバ変数の@<code>{is_task_claimed()}を呼び出しているのがわかります。
 @<code>{_process_strong_tasks}は@<code>{SubTasksDone}クラスのインスタンスです。
 
-@<code>{is_task_claimed()}の役割は、引数に受けっとた識別子に対応するタスクがすでに他スレッドのものであるかを確認することです。
+この@<code>{is_task_claimed()}の役割は、引数に受けっとた識別子に対応するタスクが他スレッドのものになってないか確認することです。
 もし、他スレッドのものであれば@<code>{true}を返し、そのタスクは実行しないようにします。
 誰のものでなければ、呼び出したスレッドのタスクにしてから@<code>{false}を返します。
 @<code>{is_task_claimed()}は内部でCAS命令を使って不可分に実行されるため、複数のスレッドで同時に呼び出されても問題ありません。
 
-そのため、@<code>{process_strong_roots()}を並列実行した場合は、各スレッドが早いものがちでif文の中にあるタスクを実行していきます。
+上記の仕組みがあるため、@<code>{process_strong_roots()}を並列実行した場合はスレッドがif文の中にあるタスクを早いもの勝ちで実行していきます。
 
-=== CMBitMapに対するマーク
+=== G1GCのルートスキャン
+では、G1GCのルートスキャンを見ていきましょう。
+以下はマーキングに関連する部分だけを抜き出しています。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4589: class G1ParTask : public AbstractGangTask {
+
+4620:   void work(int i) {
+
+4643:     G1ParScanAndMarkExtRootClosure  scan_mark_root_cl(_g1h, &pss);
+
+4651:       scan_root_cl = &scan_mark_root_cl;
+
+4659:     _g1h->g1_process_strong_roots(/* not collecting perm */ false,
+4660:                                   SharedHeap::SO_AllClasses,
+4661:                                   scan_root_cl,
+4662:                                   &push_heap_rs_cl,
+4663:                                   scan_perm_cl,
+4664:                                   i);
+//}
+
+ルートスキャンは@<code>{G1ParTask}の@<code>{work()}で実行します。
+「@<hd>{gc_thread_par|AbstractGangTaskクラス}」で説明したクラスを継承していますね。
+つまり、この@<code>{work()}は並列で動作可能です。
+この辺の詳しい内容は TODO:退避の章 で後述します。
+
+4643行目で@<code>{G1ParScanAndMarkExtRootClosure}クラスのインスタンスを作っています。
+このクラスではルートスキャン時にコピーとマークをおこないます。
+
+4659行目でそのインスタンスを@<code>{g1_process_strong_roots()}の引数に渡します。
+このメンバ関数は内部で@<code>{process_strong_roots()}を呼びます。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4696: void
+4697: G1CollectedHeap::
+4698: g1_process_strong_roots(bool collecting_perm_gen,
+4699:                         SharedHeap::ScanningOption so,
+4700:                         OopClosure* scan_non_heap_roots,
+4701:                         OopsInHeapRegionClosure* scan_rs,
+4702:                         OopsInGenClosure* scan_perm,
+4703:                         int worker_i) {
+
+4708:   BufferingOopClosure buf_scan_non_heap_roots(scan_non_heap_roots);
+
+4716:   process_strong_roots(false,
+4717:                        collecting_perm_gen, so,
+4718:                        &buf_scan_non_heap_roots,
+4719:                        &eager_scan_code_roots,
+4720:                        &buf_scan_perm);
+
+        /* G1GC特有のルートをスキャン */
+
+4757:   _process_strong_tasks->all_tasks_completed();
+4758: }
+//}
+
+@<code>{g1_process_strong_roots()}の主な役割はG1GC特有のルートもあわせてスキャンすることにあります。
+退避用記憶集合や並行マーキングのマークスタックなどが代表的な例です。
+
+また、4708行目で@<code>{OopClosure}を更に@<code>{BufferingOopClosure}でラップしています。
+このクラスの@<code>{do_oop()}は、引数に受け取った@<code>{oop}を一定量バッファに貯めこみ、満タンになったあとに一気に処理します。
+これには、ルートを探索するコストとルートをスキャンするコストを分離して計測するという狙いがあります。
+これはのちの TODO:計測の章 で後述します。
 
 == ステップ2―並行マークフェーズ
 
