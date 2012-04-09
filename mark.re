@@ -57,7 +57,7 @@
 377行目の@<code>{_parallel_marking_threads}には並列マーキングで使用するスレッド数が格納されます。
 
 392・393行目にはVMヒープに対応したビットマップの実体が割り当てられます。
-@<code>{CMBitMap}クラスについてはTODOで詳しく説明します。
+@<code>{CMBitMap}クラスについては@<hd>{ステップ1―初期マークフェーズ|ビットマップの並列化対応}で詳しく説明します。
 
 394行目の@<code>{_prevMarkBitMap}は@<code>{_markBitMap1}、もしくは@<code>{_markBitMap2}のいずれかを指しています。
 395行目の@<code>{_nextMarkBitMap}も同じです。
@@ -410,6 +410,79 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 1015行目でマークがついていないことをチェックし、1016行目で@<code>{next}ビットマップにマークします。
 
 上記の@<code>{grayRoot()}がすべてのルートに対して呼び出されれば、初期マークフェーズは終了です。
+
+=== ビットマップの並列化対応
+@<code>{next}ビットマップを表す@<code>{CMBitMap}というクラスがあります。
+このクラスはコンストラクタで@<code>{BitMap}クラスのインスタンスを生成し、メンバ変数@<code>{_bm}として保持します。
+この@<code>{_bm}がビットマップの実体であり、@<code>{CMBitMap}は@<code>{_bm}へのデリゲータでしかありません。
+
+//source[share/vm/gc_implementation/g1/concurrentMark.hpp]{
+123: class CMBitMap : public CMBitMapRO {
+
+131:   void mark(HeapWord* addr) {
+134:     _bm.at_put(heapWordToOffset(addr), true);
+135:   }
+136:   void clear(HeapWord* addr) {
+139:     _bm.at_put(heapWordToOffset(addr), false);
+140:   }
+141:   bool parMark(HeapWord* addr) {
+144:     return _bm.par_at_put(heapWordToOffset(addr), true);
+145:   }
+146:   bool parClear(HeapWord* addr) {
+149:     return _bm.par_at_put(heapWordToOffset(addr), false);
+150:   }
+//}
+
+@<code>{CMBitMap}は@<code>{CMBitMapRO}を継承します。
+@<code>{CMBitMapRO}の@<code>{RO}はReadOnlyの略で、マークとクリアができないクラスのことです。
+@<code>{CMBitMapRO}を継承して、書き込みできるように拡張したのが、上記の@<code>{CMBitMap}クラスです。
+
+@<code>{CMBitMap}は並列対応版とそうでないものの2種類の書き込み方法を持っています。
+131〜140行目に定義されている@<code>{mark()}・@<code>{clear()}が並列化に対応していないもので、141行目から定義されている@<code>{parMark()}・@<code>{parClear()}が対応したものです。
+そして、初期マークフェーズは並列で実行されることがあるため、@<code>{parMark()}を使うことになります。
+
+144・149行目で呼び出している、@<code>{BitMap}の@<code>{par_at_put()}が処理の実体になりますのでそちらを見ていきましょう。
+
+//source[share/vm/utilities/bitMap.cpp]{
+260: bool BitMap::par_at_put(idx_t bit, bool value) {
+261:   return value ? par_set_bit(bit) : par_clear_bit(bit);
+262: }
+
+53: inline bool BitMap::par_set_bit(idx_t bit) {
+55:   volatile idx_t* const addr = word_addr(bit);
+56:   const idx_t mask = bit_mask(bit);
+57:   idx_t old_val = *addr;
+58: 
+59:   do {
+60:     const idx_t new_val = old_val | mask;
+61:     if (new_val == old_val) {
+62:       return false;
+63:     }
+64:     const idx_t cur_val = (idx_t) Atomic::cmpxchg_ptr((void*) new_val,
+65:                                                       (volatile void*) addr,
+66:                                                       (void*) old_val);
+67:     if (cur_val == old_val) {
+68:       return true;
+69:     }
+70:     old_val = cur_val;
+71:   } while (true);
+72: }
+//}
+
+@<code>{par_at_put()}は内部で@<code>{par_set_bit()}か@<code>{par_clear_bit()}を呼び出します。
+どちらも似たような処理になるため、@<code>{par_set_bit()}だけ見れば十分でしょう。
+
+引数に受けとった@<code>{bit}はマーク対象オブジェクトのアドレスです。
+55行目でアドレスに対応するビットを持つ1ワードの領域へのアドレス（@<code>{addr}）を取得します。
+56行目で対象のビットのみが1になった1ワードのビットマスク（@<code>{mask}）を生成します。
+57行目で@<code>{addr}の1ワードをローカル変数に持ってきます。
+
+60行目で対象のビットを立てた新しい値（@<code>{new_val}）を生成し、64行目でCAS命令を実行します。
+@<code>{cmpxchg_ptr()}は@<code>{*addr}の値と@<code>{old_val}を比較し、同じであれば@<code>{new_val}を書き込み、違えば何もしません。
+@<code>{cmpxchg_ptr()}の戻り値は@<code>{*addr}の値になりますので、書き込みが成功したかどうかは67行目のように@<code>{old_val}と比較することで確認できます。
+成功していれば@<code>{true}を返し、失敗なら@<code>{old_val}を最新の値に更新して、ループを繰り返します。
+
+このように@<code>{par_at_put()}はデータの不整合が起きないように、CAS命令を利用してビットを書き込むため、複数のスレッドで同時にマークを実行しても問題ないわけです。
 
 == ステップ2―並行マークフェーズ
 
