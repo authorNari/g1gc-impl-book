@@ -487,8 +487,6 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 
 == ステップ2―並行マークフェーズ
 次のステップは初期マークフェーズでマークされたオブジェクトをミューテータと並行してスキャンしていくフェーズです。
-
-=== 並行マークフェーズ
 @<code>{ConcurrentMarkThread}の@<code>{run()}にて、@<code>{markFromRoots()}を呼び出して並行マークフェーズが開始されます。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
@@ -535,7 +533,7 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 この@<code>{do_marking_step()}では、『アルゴリズム編 2.5.1 SATB』で述べた、SATB集合のキューと初期マークフェーズでマークしたオブジェクトのスキャンを淡々とおこなっていきます。
 ここは複雑な上にあまり面白い箇所でもないので、『アルゴリズム編』で書いたくらいの情報がわかっていれば問題ないでしょう。
 
-===[column] タスクスティーリング
+==[column] タスクスティーリング
 並行マークフェーズは複数のスレッドを使ってオブジェクトのスキャンというタスクをこなします。
 ここで気になるのがタスク量の問題です。
 もしスレッドAがこなすタスク量が多ければ、他のスレッドBはスレッドAのタスクが終了するのを待たなければなりません。
@@ -551,13 +549,70 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 そのため、ここの並行マークフェーズではタスクスティーリングというアルゴリズムを使って、複数のスレッドの仕事量をバランスしています。
 スレッドBは自分のタスクが終わったただ待っているのではなく、スレッドAのタスクを盗んで意欲的にタスクをこなすというアルゴリズムです。
 
-もし興味がある方は以下の記事や発表（手前味噌ではありますが）が参考になると思います。
-ぜひ読んでみてください。
+HotspotVMではタスクスティーリングを簡単に利用できるユーティリティが実装されており、主に並列マーキングにタスクスティーリングが活用されています。
+なかなか面白いアルゴリズムですので、もし興味がある方は以下の記事や発表（手前味噌ではありますが）を読んでみてください。
 
  TODO: リンク
 
-=== セーフポイントの停止
-
 == ステップ3―最終マークフェーズ
+次のフェーズはマークしきれなかったオブジェクトをミューテータを止めてスキャンするフェーズです。
+@<code>{ConcurrentMarkThread}の@<code>{run()}にて、@<code>{VM_CGC_Operation}を使って最終マークフェーズが開始されます。
 
-== ステップ4―後始末
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
+             /* 3. 最終マークフェーズ */
+150:         if (!cm()->has_aborted()) {
+
+165:           CMCheckpointRootsFinalClosure final_cl(_cm);
+166:           sprintf(verbose_str, "GC remark");
+167:           VM_CGC_Operation op(&final_cl, verbose_str);
+168:           VMThread::execute(&op);
+169:         }
+//}
+
+@<code>{VM_CGC_Operation}の定義は次のとおりです。
+
+//source[share/vm/gc_implementation/g1/vm_operations_g1.hpp]{
+98:  class VM_CGC_Operation: public VM_Operation {
+99:    VoidClosure* _cl;
+100:   const char* _printGCMessage;
+
+105:   virtual void doit();
+
+111: };
+//}
+
+@<code>{VM_Operation}クラスを継承したクラスで、コンストラクタに@<code>{VoidClosure}等を取ります。
+
+//source[share/vm/gc_implementation/g1/vm_operations_g1.cpp]{
+156: void VM_CGC_Operation::doit() {
+
+164:     _cl->do_void();
+
+168: }
+//}
+
+VMオペレーションの核の部分である@<code>{doit()}では、@<code>{_cl}の@<code>{do_void()}を呼び出しているだけです。
+@<code>{doit()}が実行されるときはすでにセーフポイント上にあり、ミューテータは動いていません。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
+66: class CMCheckpointRootsFinalClosure: public VoidClosure {
+68:   ConcurrentMark* _cm;
+69: public:
+70: 
+71:   CMCheckpointRootsFinalClosure(ConcurrentMark* cm) :
+72:     _cm(cm) {}
+73: 
+74:   void do_void(){
+75:     _cm->checkpointRootsFinal(false);
+76:   }
+77: };
+//}
+
+@<code>{CMCheckpointRootsFinalClosure}クラスの@<code>{do_void()}は、@<code>{ConcurrentMark}の@<code>{checkpointRootsFinal()}を呼び出すだけです。
+
+この@<code>{checkpointRootsFinal()}では、並行マークフェーズでスキャンしきれなかったオブジェクトを複数スレッドで並列にスキャンしていきます。
+この辺りも『アルゴリズム編 2.6 ステップ3―最終マークフェーズ』の内容がわかっていれば問題ないでしょう。
+
+== ステップ4―生存オブジェクトカウント
+
+== ステップ5―後始末
