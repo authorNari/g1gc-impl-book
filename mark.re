@@ -1,7 +1,8 @@
 = 並行マーキング
 
 本章ではG1GCの並行マーキングの実装を解説していきます。
-本章を読む前に『アルゴリズム編 2.並行マーキング』を読むことをオススメします。
+アルゴリズム編で紹介した部分の実装をなぞってもあまり面白くないので、アルゴリズム編であまり触れていない内容を特に取り上げながら説明していきます。
+ですので、本章を読む前に『アルゴリズム編 2.並行マーキング』を軽く読むことをオススメします。
 
 == 並行マーキングの全体像
 
@@ -485,12 +486,77 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 このように@<code>{par_at_put()}はデータの不整合が起きないように、CAS命令を利用してビットを書き込むため、複数のスレッドで同時にマークを実行しても問題ないわけです。
 
 == ステップ2―並行マークフェーズ
+次のステップは初期マークフェーズでマークされたオブジェクトをミューテータと並行してスキャンしていくフェーズです。
 
-=== エントリポイント
+=== 並行マークフェーズ
+@<code>{ConcurrentMarkThread}の@<code>{run()}にて、@<code>{markFromRoots()}を呼び出して並行マークフェーズが開始されます。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
+93: void ConcurrentMarkThread::run() {
+
+             /* 2. 並行マークフェーズ */
+143:         if (!cm()->has_aborted()) {
+144:           _cm->markFromRoots();
+145:         }
+//}
+
+//source[share/vm/gc_implementation/g1/concurrentMark.cpp]{
+1162: void ConcurrentMark::markFromRoots() {
+
+1176:   CMConcurrentMarkingTask markingTask(this, cmThread());
+1177:   if (parallel_marking_threads() > 0)
+1178:     _parallel_workers->run_task(&markingTask);
+1179:   else
+1180:     markingTask.work(0);
+
+1182: }
+//}
+
+@<code>{ConcurrentMark}の@<code>{markFromRoots()}は@<code>{CMConcurrentMarkingTask}を生成して、そのタスクを1178行目のように並列に実行させます。
+もし並列マーキングで使用するスレッド数が0であれば、並列実行をやめます。
+どちらにせよ、この処理は並行マークスレッド上の処理になりますので、ミューテータを並行に動きます。
+
+//source[share/vm/gc_implementation/g1/concurrentMark.cpp]{
+1089: class CMConcurrentMarkingTask: public AbstractGangTask {
+
+1095:   void work(int worker_i) {
+
+1105:     CMTask* the_task = _cm->task(worker_i);
+
+1113:         the_task->do_marking_step(mark_step_duration_ms,
+1114:                                   true /* do_stealing    */,
+1115:                                   true /* do_termination */);
+
+1153:   }
+//}
+
+タスクの@<code>{work()}では、1105行目で@<code>{ConcurrentMark}にスレッド数分用意しておいた@<code>{CMTask}を取り出し、その@<code>{do_marking_step()}を呼び出します。
+
+この@<code>{do_marking_step()}では、『アルゴリズム編 2.5.1 SATB』で述べた、SATB集合のキューと初期マークフェーズでマークしたオブジェクトのスキャンを淡々とおこなっていきます。
+ここは複雑な上にあまり面白い箇所でもないので、『アルゴリズム編』で書いたくらいの情報がわかっていれば問題ないでしょう。
+
+===[column] タスクスティーリング
+並行マークフェーズは複数のスレッドを使ってオブジェクトのスキャンというタスクをこなします。
+ここで気になるのがタスク量の問題です。
+もしスレッドAがこなすタスク量が多ければ、他のスレッドBはスレッドAのタスクが終了するのを待たなければなりません。
+この場合、スレッドBはタスクをこなさない状態で待つことになります。
+これは無駄ですよね。
+機械にサボらせてはいけません。
+
+じゃあ、同じ量のタスクをあらかじめ振り分ければいいじゃないか、と思うかもしれませんが、多くのケースでそれはうまくいきません。
+なぜなら正確なタスクの量を計測するのはコストがかかるからです。
+このケースだと、オブジェクトのスキャンというタスクの量は、オブジェクトがもつ参照関係の深さに依存しています。
+オブジェクトの参照関係を調べるためにはかなりコストがかかります。
+
+そのため、ここの並行マークフェーズではタスクスティーリングというアルゴリズムを使って、複数のスレッドの仕事量をバランスしています。
+スレッドBは自分のタスクが終わったただ待っているのではなく、スレッドAのタスクを盗んで意欲的にタスクをこなすというアルゴリズムです。
+
+もし興味がある方は以下の記事や発表（手前味噌ではありますが）が参考になると思います。
+ぜひ読んでみてください。
+
+ TODO: リンク
 
 === セーフポイントの停止
-
-=== SATB
 
 == ステップ3―最終マークフェーズ
 
