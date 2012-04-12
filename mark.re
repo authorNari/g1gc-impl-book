@@ -635,3 +635,42 @@ VMオペレーションの核の部分である@<code>{doit()}では、@<code>{_
 すべてのリージョンをカウントし終えると、200行目で@<code>{leave()}を呼び、次のステップへ移ります。
 
 == ステップ5―後始末
+最後のステップ5では並行マーキングの後始末をおこない、次回の並行マーキングに備えます。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
+218:       if (!cm()->has_aborted()) {
+
+226:         CMCleanUp cl_cl(_cm);
+227:         sprintf(verbose_str, "GC cleanup");
+228:         VM_CGC_Operation op(&cl_cl, verbose_str);
+229:         VMThread::execute(&op);
+230:       }
+
+           /* nextビットマップクリア */
+287:       _sts.join();
+288:       _cm->clearNextBitmap();
+289:       _sts.leave();
+//}
+
+226〜229行目に掛けて@<code>{VM_CGC_Operation}を使ってセーフポイントで後始末をおこないます。
+@<code>{VM_CGC_Operation}内部では@<code>{CMCleanUp}の@<code>{do_void()}を呼びだします。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
+79: class CMCleanUp: public VoidClosure {
+80:   ConcurrentMark* _cm;
+81: public:
+82: 
+83:   CMCleanUp(ConcurrentMark* cm) :
+84:     _cm(cm) {}
+85: 
+86:   void do_void(){
+87:     _cm->cleanup();
+88:   }
+89: };
+//}
+
+@<code>{do_void()}の中では@<code>{ConcurrentMark}の@<code>{cleanup()}を呼び出します。
+この中で各リージョンのnextビットマップとprevビットマップをスワップしたり、並行マーキングに利用した変数の初期化などをおこないます。
+
+その後、@<code>{clearNextBitmap()}を呼び出して各リージョンのnextビットマップをクリアします。
+@<code>{clearNextBitmap()}は事前に@<code>{SuspendibleThreadSet}の@<code>{join()}を呼び出すため、セーフポイント中は必ず停止しています。
