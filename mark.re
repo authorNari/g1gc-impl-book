@@ -552,7 +552,8 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 HotspotVMではタスクスティーリングを簡単に利用できるユーティリティが実装されており、主に並列マーキングにタスクスティーリングが活用されています。
 なかなか面白いアルゴリズムですので、もし興味がある方は以下の記事や発表（手前味噌ではありますが）を読んでみてください。
 
- TODO: リンク
+ * @<href>{http://www.nminoru.jp/~nminoru/programming/arora_dequeue.html, Arora's Task Stealing Deque}
+ * @<href>{http://www.slideshare.net/authorNari/crubygc, CRubyGCの並列世界}
 
 == ステップ3―最終マークフェーズ
 次のステップはマークしきれなかったオブジェクトをミューテータを止めてスキャンするステップです。
