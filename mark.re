@@ -486,7 +486,7 @@ HotspotVMにはルート走査をおこなう@<code>{process_strong_roots()}メ�
 このように@<code>{par_at_put()}はデータの不整合が起きないように、CAS命令を利用してビットを書き込むため、複数のスレッドで同時にマークを実行しても問題ないわけです。
 
 == ステップ2―並行マークフェーズ
-次のステップは初期マークフェーズでマークされたオブジェクトをミューテータと並行してスキャンしていくステップです。
+ステップ2では初期マークフェーズでマークされたオブジェクトをミューテータと並行してスキャンします。
 @<code>{ConcurrentMarkThread}の@<code>{run()}にて、@<code>{markFromRoots()}を呼び出して並行マークフェーズが開始されます。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
@@ -556,7 +556,7 @@ HotspotVMではタスクスティーリングを簡単に利用できるユー�
  * @<href>{http://www.slideshare.net/authorNari/crubygc, CRubyGCの並列世界}
 
 == ステップ3―最終マークフェーズ
-次のステップはマークしきれなかったオブジェクトをミューテータを止めてスキャンするステップです。
+ステップ3ではマークしきれなかったオブジェクトをミューテータを止めてスキャンします。
 @<code>{ConcurrentMarkThread}の@<code>{run()}にて、@<code>{VM_CGC_Operation}を使って最終マークフェーズが開始されます。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
@@ -615,5 +615,23 @@ VMオペレーションの核の部分である@<code>{doit()}では、@<code>{_
 この辺りも『アルゴリズム編 2.6 ステップ3―最終マークフェーズ』の内容がわかっていれば問題ないでしょう。
 
 == ステップ4―生存オブジェクトカウント
+ステップ4ではnextビットマップを走査し、リージョンごとの生存オブジェクトのバイト数をカウントします。
+
+//source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp:再掲]{
+           /* 4. 生存オブジェクトカウント */
+190:       if (!cm()->has_aborted()) {
+
+198:         _sts.join();
+199:         _cm->calcDesiredRegions();
+200:         _sts.leave();
+
+211:       }
+//}
+
+199行目の@<code>{calcDesiredRegions()}が生存オブジェクトをカウントするメンバ関数です。
+198行目で@<code>{SuspendibleThreadSet}の@<code>{join()}を呼び出していますので、セーフポイントで生存オブジェクトのカウントが動くことはありません。
+
+@<code>{calcDesiredRegions()}は各リージョンのnextビットマップを走査して、マークが付いているオブジェクトの合計サイズを求めたあと、@<code>{HeapRegion}の@<code>{_next_marked_bytes}メンバ変数に格納していきます。
+すべてのリージョンをカウントし終えると、200行目で@<code>{leave()}を呼び、次のステップへ移ります。
 
 == ステップ5―後始末
