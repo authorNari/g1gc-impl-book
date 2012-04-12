@@ -17,6 +17,7 @@
  * 7.[スレッドの排他制御](http://www.narihiro.info/g1gc-impl-book/lock.html)
  * 8.[GCスレッド（並列編）](http://www.narihiro.info/g1gc-impl-book/gc_thread_par.html)
  * 9.[GCスレッド（並行編）](http://www.narihiro.info/g1gc-impl-book/gc_thread_con.html)
+ * 10.[並行マーキング](http://www.narihiro.info/g1gc-impl-book/mark.html)
  * x.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
@@ -53,7 +54,6 @@
 以下について今後書きたいと思っています。
 
  * JITと正確なGCの解説
- * 並行マーキングの解説
  * 退避の解説
  * 退避時間予測の解説
    * 減衰など
