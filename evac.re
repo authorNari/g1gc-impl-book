@@ -115,3 +115,50 @@ VMが退避を実行する理由は「アロケーション時に空き領域が
 この関数では、引数に受け取るGC停止時間上限を超えないような回収集合を選択します。
 
 3362行目の@<code>{evacuate_collection_set()}で選択した回収集合の生存オブジェクトを退避していきます。
+
+=== 退避用記憶集合維持スレッド
+『アルゴリズム編 3.4』で紹介した退避用記憶集合維持スレッドは@<code>{ConcurrentG1RefineThread}というクラスに実装されています。
+
+@<code>{ConcurrentG1RefineThread}クラスのインスタンスは@<code>{ConcurrentG1Refine}クラスのコンストラクタで生成されます。
+
+//source[share/vm/gc_implementation/g1/concurrentG1Refine.cpp]{
+48: ConcurrentG1Refine::ConcurrentG1Refine() :
+60: {
+
+77:   _n_worker_threads = thread_num();
+79:   _n_threads = _n_worker_threads + 1;
+80:   reset_threshold_step();
+81: 
+82:   _threads = NEW_C_HEAP_ARRAY(ConcurrentG1RefineThread*, _n_threads);
+83:   int worker_id_offset = (int)DirtyCardQueueSet::num_par_ids();
+84:   ConcurrentG1RefineThread *next = NULL;
+85:   for (int i = _n_threads - 1; i >= 0; i--) {
+86:     ConcurrentG1RefineThread* t =
+           new ConcurrentG1RefineThread(this, next, worker_id_offset, i);
+89:     _threads[i] = t;
+90:     next = t;
+91:   }
+92: }
+//}
+
+77行目の@<code>{thread_num()}で生成する@<code>{ConcurrentG1RefineThread}インスタンスの数が決まります。
+この@<code>{thread_num()}の値は@<code>{G1ConcRefinementThreads}というユーザが起動オプションに指定できる値でも変更可能です。
+
+@<code>{ConcurrentG1RefineThread}クラスはインスタンスを作った時点でスレッドの生成・起動をおこないます。
+86行目でインスタンスを生成すると同時に、退避用記憶集合維持スレッドは動き出します。
+
+@<code>{ConcurrentG1Refine}のコンストラクタは@<code>{G1CollectedHeap}の@<code>{initialize()}で呼び出されます。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+1794: jint G1CollectedHeap::initialize() {
+
+1816:   _cg1r = new ConcurrentG1Refine();
+//}
+
+そのため、VMヒープを生成するタイミングで退避用記憶集合維持スレッドも動きはじめることになります。
+
+== ステップ1―回収集合選択
+
+== ステップ2―ルート退避
+
+== ステップ3―退避
