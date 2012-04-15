@@ -91,3 +91,27 @@ VMが退避を実行する理由は「アロケーション時に空き領域が
 
 105行目の@<code>{do_collection_pause_at_safepoint()}で退避は実行されます
 成功すれば退避で空いた領域にメモリを割り当てて、@<code>{_result}メンバ変数にポインタを格納してVMオペレーションを終了します。
+
+=== do_collection_pause_at_safepoint()
+@<code>{do_collection_pause_at_safepoint()}の説明に必要な部分を抜き出すと次のようになります。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+3188: bool
+3189: G1CollectedHeap::do_collection_pause_at_safepoint(
+        double target_pause_time_ms) {
+
+            /* 1. 回収集合選択 */
+3336:       g1_policy()->choose_collection_set(target_pause_time_ms);
+
+            /* 2.,3. 退避 */
+3362:       evacuate_collection_set();
+
+3494:   return true;
+3495: }
+//}
+
+@<code>{do_collection_pause_at_safepoint()}は引数にGC停止時間の上限を受け取ります。
+3336行目の@<code>{choose_collection_set()}は回収集合を選択するメンバ関数です。
+この関数では、引数に受け取るGC停止時間上限を超えないような回収集合を選択します。
+
+3362行目の@<code>{evacuate_collection_set()}で選択した回収集合の生存オブジェクトを退避していきます。
