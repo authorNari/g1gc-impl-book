@@ -7,7 +7,7 @@
 退避の全体像をおさらいしていきましょう。
 
 === 実行ステップ
-退避は大まかに分けて次の3ステップにわかれています。
+退避はおおまかに次の3ステップにわかれています。
 
  1. 回収集合選択
  2. ルート退避
@@ -25,6 +25,7 @@
 そのため、退避中はミューテータは停止した状態になっています。
 
 === 退避の実行タイミング
+TODO: 『アルゴリズム編 5.8』
 VMが退避を実行する理由は「アロケーション時に空き領域が足りなくなった」というケースがほとんどです。
 オブジェクトをVMヒープからアロケーションする際に空き領域が不足した場合、VMヒープを拡張するまえに退避を実行して空きを作り、そこに対してオブジェクトを割り当てます。
 
@@ -158,6 +159,80 @@ VMが退避を実行する理由は「アロケーション時に空き領域が
 そのため、VMヒープを生成するタイミングで退避用記憶集合維持スレッドも動きはじめることになります。
 
 == ステップ1―回収集合選択
+最初のステップである回収集合選択からみていきましょう。
+回収集合選択は@<code>{G1CollectorPolicy_BestRegionsFirst}クラスの@<code>{choose_collection_set()}に実装されています。
+
+=== 新世代リージョン選択
+『アルゴリズム編 5.1』の中で説明したとおり、すべての新世代リージョンは回収集合に選択されます。
+
+//source[share/vm/gc_implementation/g1/g1CollectorPolicy.cpp:choose_collection_set():前半]{
+2853: void
+2854: G1CollectorPolicy_BestRegionsFirst::choose_collection_set(
+2855:                              double target_pause_time_ms) {
+
+2866:   double base_time_ms = predict_base_elapsed_time_ms(_pending_cards);
+2867:   double predicted_pause_time_ms = base_time_ms;
+2869:   double time_remaining_ms = target_pause_time_ms - base_time_ms;
+
+2897:   if (in_young_gc_mode()) {
+
+          /* 新世代リージョンを回収集合へ */
+2932:     _collection_set = _inc_cset_head;
+2933:     _collection_set_size = _inc_cset_size;
+2934:     _collection_set_bytes_used_before = _inc_cset_bytes_used_before;
+
+2940:     time_remaining_ms -= _inc_cset_predicted_elapsed_time_ms;
+2941:     predicted_pause_time_ms += _inc_cset_predicted_elapsed_time_ms;
+
+2974:   }
+
+//}
+
+2866行目の@<code>{predict_base_elapsed_time_ms()}はリージョンを退避する処理以外の部分の停止時間を予測します。
+内部では過去の停止予測時間と実際の停止時間を保持しており、実行を繰り返すたびに予測時間の精度が上がるようになっています。
+2867行目の@<code>{predicted_pause_time_ms}が予測停止時間を保持するローカル変数で、2869行目の@<code>{time_remaining_ms}が残りの停止可能時間です。
+
+2897行目の@<code>{in_young_gc_mode()}はG1GCが世代別方式であるかを示すフラグを返します。
+G1GCは必ず世代別G1GC方式で動作しますので、@<code>{in_young_gc_mode()}は@<code>{true}を必ず返します。
+
+2932〜2934行目に掛けて新世代リージョンを回収集合に設定しています。
+@<code>{_collection_set}メンバ変数が回収集合を表すものです。
+
+2940〜2941行目であらかじめ計算していた停止予測時間を使って、@<code>{predicted_pause_time_ms}と@<code>{time_remaining_ms}を計算します。
+『アルゴリズム編 5.6 新世代リージョン数上限決定』で説明したとおり、過去の実行履歴でこの停止予測時間は算出されます。
+
+=== 旧世代リージョン選択
+部分的新世代GCの場合は旧世代のリージョンも回収集合に追加します。
+
+//source[share/vm/gc_implementation/g1/g1CollectorPolicy.cpp:choose_collection_set():後半]{
+2976:   if (!in_young_gc_mode() || !full_young_gcs()) {
+
+2981:     do {
+2982:       hr = _collectionSetChooser->getNextMarkedRegion(time_remaining_ms,
+2983:                                                       avg_prediction);
+2984:       if (hr != NULL) {
+2985:         double predicted_time_ms = predict_region_elapsed_time_ms(hr, false);
+2986:         time_remaining_ms -= predicted_time_ms;
+2987:         predicted_pause_time_ms += predicted_time_ms;
+2988:         add_to_collection_set(hr);
+
+              /* 省略: should_continueの値設定 */
+2997:       }
+3002:     } while (should_continue);
+
+3007:   }
+
+3019: }
+//}
+
+2976行目の@<code>{full_young_gc()}は全新世代GCを示すフラグを返すメンバ関数です。
+もし@<code>{false}を返す場合は、部分的新世代GCのモードにあることを示します。
+
+2982行目で残りの停止可能時間内で追加可能なリージョンを取得します。
+もし存在しなければ@<code>{NULL}を返します。
+
+存在する場合、2985行目の@<code>{predict_region_elapsed_time_ms()}で予測停止時間を算出して、2988行目で回収集合に追加します。
+最終的に@<code>{time_remaining_ms}がマイナスになった場合は@<code>{should_continue}を@<code>{false}にして、whileループを抜けます。
 
 == ステップ2―ルート退避
 
