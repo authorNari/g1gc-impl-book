@@ -394,6 +394,39 @@ AMD64以外はインラインアセンブラを使ってコピーを自前で実
  * @<href>{http://d.hatena.ne.jp/wocota/20090628/1246188338, GCCのインラインアセンブラの書き方 for x86 - OSのようなもの}
 
 == ステップ3―退避
-退避はルートから
+ルート退避で退避したオブジェクトのフィールドは退避キューに保持されています。
+このステップではその退避キュー内に保持したフィールドが参照している子オブジェクトを次々に退避していきます。
 
-G1ParEvacuateFollowersClosureの残りの部分など
+@<code>{G1ParTask}の@<code>{work()}では、ルート退避完了後に@<code>{G1ParEvacuateFollowersClosure}の@<code>{do_void()}を呼び出します。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4620:   void work(int i) {
+
+          /* 省略: ルート退避 */
+
+4666:     {
+
+4668:       G1ParEvacuateFollowersClosure evac(_g1h, &pss, _queues, &_terminator);
+4669:       evac.do_void();
+
+4674:     }
+//}
+
+@<code>{do_void()}の中では退避キューが保持するオブジェクトを次々に退避していきます。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4565: void G1ParEvacuateFollowersClosure::do_void() {
+4566:   StarTask stolen_task;
+4567:   G1ParScanThreadState* const pss = par_scan_state();
+4568:   pss->trim_queue();
+
+        /* 省略: タスクスティーリング */
+
+4587: }
+//}
+
+4567行目の@<code>{G1ParScanThreadState}のインスタンス内部で退避キューを保持しています。
+この退避キューはスレッドローカルなもので、他の退避スレッドと競合しません。
+4568行目の@<code>{trim_queue()}で退避キューが空になるまでオブジェクト退避を続けます。
+
+他のスレッドが退避対象が多すぎた場合は、タスクスティーリングを使って仕事量が偏り過ぎないように調整します。
