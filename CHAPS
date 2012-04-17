@@ -9,5 +9,5 @@ gc_thread_par.re
 gc_thread_con.re
 mark.re
 evac.re
-predict.re
+scheduling.re
 precise.re
