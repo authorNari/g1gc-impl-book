@@ -162,6 +162,8 @@ VMが退避を実行する理由は「アロケーション時に空き領域が
 最初のステップである回収集合選択からみていきましょう。
 回収集合選択は@<code>{G1CollectorPolicy_BestRegionsFirst}クラスの@<code>{choose_collection_set()}に実装されています。
 
+回収集合選択で利用される予測時間の計算はほとんど『アルゴリズム編 4.2 退避時間の予測』で紹介した内容ですので、計算内容は省略します。
+
 === 新世代リージョン選択
 『アルゴリズム編 5.1』の中で説明したとおり、すべての新世代リージョンは回収集合に選択されます。
 
@@ -235,5 +237,163 @@ G1GCは必ず世代別G1GC方式で動作しますので、@<code>{in_young_gc_m
 最終的に@<code>{time_remaining_ms}がマイナスになった場合は@<code>{should_continue}を@<code>{false}にして、whileループを抜けます。
 
 == ステップ2―ルート退避
+ルート退避はルートから直接参照可能な回収集合内のオブジェクトを別の空きリージョンに退避するステップです。
+
+=== evacuate_collection_set()
+@<hd>{退避の全体像|do_collection_pause_at_safepoint()}で説明したとおり、退避は@<code>{evacuate_collection_set()}で実行されます。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4785: void G1CollectedHeap::evacuate_collection_set() {
+
+4792:   int n_workers = (ParallelGCThreads > 0 ? workers()->total_workers() : 1);
+4793:   set_par_threads(n_workers);
+4794:   G1ParTask g1_par_task(this, n_workers, _task_queues);
+
+4802:   if (G1CollectedHeap::use_parallel_gc_threads()) {
+4806:     workers()->run_task(&g1_par_task);
+4807:   } else {
+4809:     g1_par_task.work(0);
+4810:   }
+
+//}
+
+@<code>{evacuate_collection_set()}では@<hd>{mark|ステップ1―初期マークフェーズ|G1GCのルートスキャン}で登場した@<code>{G1ParTask}を生成し、（可能な場合は並列で）実行します。
+
+@<code>{G1ParTask}はすでに説明した通り、@<code>{process_strong_roots()}を使ってすべてのルートを走査し、G1GCの場合は@<code>{G1ParScanAndMarkExtRootClosure}クラスの@<code>{do_oop()}を適用します。
+この@<code>{do_oop()}にオブジェクトを退避する処理が実装されています。
+
+=== オブジェクト退避
+@<code>{do_oop()}は最終的に@<code>{G1ParCopyHelper}クラスの@<code>{copy_to_survivor_space()}を呼び出し、オブジェクトを空きリージョンに退避します。
+この中の処理は『アルゴリズム編 3.8.1 オブジェクト退避』で詳細に述べてたため省略します。
+
+=== コピー関数
+とはいえ、全部見ないもの何か味気ないものですので、ここからは著者が読んでいて面白かった「オブジェクトのコピーに使う関数」を紹介しておきます。
+
+以下はG1GCでオブジェクトをコピーする部分だけ抜き出したものです。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4397:     Copy::aligned_disjoint_words((HeapWord*) old, obj_ptr, word_sz);
+//}
+
+@<code>{aligned_disjoint_words}は@<code>{Copy}クラスの静的メンバ関数です。
+
+//source[share/vm/utilities/copy.hpp]{
+114:   static void aligned_disjoint_words(HeapWord* from,
+                                          HeapWord* to, size_t count) {
+115:     assert_params_aligned(from, to);
+116:     assert_disjoint(from, to, count);
+117:     pd_aligned_disjoint_words(from, to, count);
+118:   }
+//}
+
+引数には@<code>{from}、@<code>{to}、そしてコピーするデータのワード数を引数に取ります。
+115行目の@<code>{assert_params_aligned()}は@<code>{from}と@<code>{to}がアラインメントされた値かをチェックします。
+116行目は@<code>{from}から@<code>{to}へ、コピーする際にメモリ領域が重ならないことをチェックします。
+117行目の@<code>{pd_aligned_disjoint_words()}は各OSごとに定義されている静的メンバ関数です。
+
+ここではOSがLinuxでCPUがx86のものに対する@<code>{pd_aligned_disjoint_words()}を見てみます。
+
+//source[os_cpu/linux_x86/vm/copy_linux_x86.inline.hpp]{
+73:  static void pd_disjoint_words(HeapWord* from, HeapWord* to, size_t count) {
+74:  #ifdef AMD64
+75:    switch (count) {
+76:    case 8:  to[7] = from[7];
+77:    case 7:  to[6] = from[6];
+78:    case 6:  to[5] = from[5];
+79:    case 5:  to[4] = from[4];
+80:    case 4:  to[3] = from[3];
+81:    case 3:  to[2] = from[2];
+82:    case 2:  to[1] = from[1];
+83:    case 1:  to[0] = from[0];
+84:    case 0:  break;
+85:    default:
+86:      (void)memcpy(to, from, count * HeapWordSize);
+87:      break;
+88:    }
+89:  #else
+         /* 省略: その他 */
+108: #endif // AMD64
+109: }
+
+139: static void pd_aligned_disjoint_words(HeapWord* from,
+                                           HeapWord* to, size_t count) {
+140:   pd_disjoint_words(from, to, count);
+141: }
+//}
+
+@<code>{pd_aligned_disjoint_words()}は@<code>{pd_disjoint_words()}をそのまま呼び出します。
+
+@<code>{pd_disjoint_words()}はCPUがAMD64の場合と、そうでない場合で処理が異なります。
+まず、AMD64だった場合を見てみましょう。
+8ワード以下の場合、76〜84行目までのcase文に当てはまり、@<code>{=}演算子によるメモリコピーがおこなわれます。
+それ以外は@<code>{memcpy()}を呼び出しています。
+たぶん、コピーするデータがあまりにも小さいと関数呼び出しのコストの方がバカにならないので@<code>{memcpy()}の呼び出しをケチっているのでしょう。
+
+//source[os_cpu/linux_x86/vm/copy_linux_x86.inline.hpp]{
+73:   static void pd_disjoint_words(HeapWord* from, HeapWord* to, size_t count) {
+74:   #ifdef AMD64
+          /* 省略 */
+89:   #else
+91:    intx temp;
+92:    __asm__ volatile("        testl   %6,%6       ;"
+93:                     "        jz      3f          ;"
+94:                     "        cmpl    $32,%6      ;"
+95:                     "        ja      2f          ;"
+96:                     "        subl    %4,%1       ;"
+97:                     "1:      movl    (%4),%3     ;"
+98:                     "        movl    %7,(%5,%4,1);"
+99:                     "        addl    $4,%0       ;"
+100:                    "        subl    $1,%2        ;"
+101:                    "        jnz     1b          ;"
+102:                    "        jmp     3f          ;"
+103:                    "2:      rep;    smovl       ;"
+104:                    "3:      nop                  "
+105:                    : "=S" (from), "=D" (to), "=c" (count), "=r" (temp)
+106:                    : "0"  (from), "1"  (to), "2"  (count), "3"  (temp)
+107:                    : "memory", "cc");
+108: #endif // AMD64
+109: }
+//}
+
+AMD64以外はインラインアセンブラを使ってコピーを自前で実装しています。
+簡単に概要だけ説明します。
+
+92〜93行目は@<code>{count}が@<code>{0}でないことをチェックする処理です。
+92行目の@<code>{testl}は@<code>{count}のANDをとっています。
+もし@<code>{count}が0の場合は93行目の@<code>{jz}で104行目にジャンプします。
+
+94〜95行目は@<code>{count}が@<code>{32}以下であることチェックする処理です。
+もし@<code>{count}が@<code>{32}より大きければ、95行目の@<code>{ja}は103行目にジャンプします。
+
+103行目は@<code>{rep}を使ったストリングス命令@<code>{smovl}の実行です。
+@<code>{count}の分だけ@<code>{smovl}を繰り返し、@<code>{from}から@<code>{to}へデータをコピーします。
+
+96〜102行目はジャンプを使ったループでコピーする処理です。
+@<code>{count}が32以下であればこっちを使います。
+96行目は@<code>{from}と@<code>{to}をオフセットを求め、@<code>{to}のレジスタに格納します。
+97行目で@<code>{from}の1ワード分のデータを@<code>{temp}のレジスタに格納。
+98行目で@<code>{temp}のデータを@<code>{from + オフセット}の位置（最初は@<code>{to}の先頭）へコピー。
+99行目でオフセット加算。
+100行目で@<code>{count}を@<code>{1}減らす。
+101行目で@<code>{count}が@<code>{0}になってないか確認。
+@<code>{0}じゃければ97行目にジャンプ。
+もし0であれば103行目の@<code>{jmp}で104行目にジャンプ。
+
+と、こんな感じです。
+はたしてこれは@<code>{memcpy()}よりも速いのでしょうか。
+卜部さんのかかれた以下の記事では（これは@<code>{memset64}についてですが）興味深い実験結果と考察が書かれています。
+ぜひ読んでみてください。
+
+ * @<href>{http://shyouhei.tumblr.com/post/2988488168/memset64-char-word, 卜部昌平のあまりreblogしないtumblr - 最速の memset64 を求めて}
+
+@<code>{memset64}の用途では上記の結果になりますが、@<code>{memcpy()}の場合はどうなんでしょうね。
+いろいろと変わってきそうです。
+
+インラインアセンブラの読み方に関しては以下の記事を参考にしました。
+
+ * @<href>{http://d.hatena.ne.jp/wocota/20090628/1246188338, GCCのインラインアセンブラの書き方 for x86 - OSのようなもの}
 
 == ステップ3―退避
+退避はルートから
+
+G1ParEvacuateFollowersClosureの残りの部分など
