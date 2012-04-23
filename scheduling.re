@@ -266,7 +266,11 @@ HotspotVMは「Aは次回のテストで47点を取る」と予測します。
                    mmu_tracker->when_ms(now, remark_prediction_ms);
 155:             os::sleep(current_thread, sleep_time_ms, false);
 
-                 /* 最終マークフェーズ実行 */
+               /* 最終マークフェーズ実行 */
+165:           CMCheckpointRootsFinalClosure final_cl(_cm);
+166:           sprintf(verbose_str, "GC remark");
+167:           VM_CGC_Operation op(&final_cl, verbose_str);
+168:           VMThread::execute(&op);
 //}
 
 152行目の@<code>{os::elapsedTime()}はHotspotVMが起動してからの経過時間を返す静的メンバ関数です。
@@ -278,3 +282,37 @@ HotspotVMは「Aは次回のテストで47点を取る」と予測します。
 並行マーキングの他の停止処理でも上記と同じように実行タイミングを決定しています。
 
 == 退避のスケジューリング
+退避の実行タイミングは『アルゴリズム編 5.8 新世代リージョン数上限決定』で述べたように新世代リージョンの数で決まります。
+全新世代GCの計算方法はかなり複雑なのでかんたんな部分的新世代GCの場合だけ見てみましょう。
+
+部分的新世代GCの場合、新世代リージョン数上限はGC単位時間を守れる範囲のなるべく小さい値でしたね。
+その値は次のメンバ関数で設定します。
+
+//source[share/vm/gc_implementation/g1/g1CollectorPolicy.cpp]{
+503: void G1CollectorPolicy::calculate_young_list_min_length() {
+504:   _young_list_min_length = 0;
+505: 
+509:   if (_alloc_rate_ms_seq->num() > 3) {
+510:     double now_sec = os::elapsedTime();
+511:     double when_ms = _mmu_tracker->when_max_gc_sec(now_sec) * 1000.0;
+512:     double alloc_rate_ms = predict_alloc_rate_ms();
+513:     size_t min_regions = (size_t) ceil(alloc_rate_ms * when_ms);
+514:     size_t current_region_num = _g1->young_list()->length();
+515:     _young_list_min_length = min_regions + current_region_num;
+516:   }
+517: }
+//}
+
+まず、511行目の@<code>{when_max_gc_sec()}に現在の経過時間を渡して、次回の停止可能タイミングまでの時間を求めます。
+512行目の@<code>{predict_alloc_rate_ms()}は次回の「割り当てたリージョン数/経過時間」というレートを予測するメンバ関数です。
+
+//source[share/vm/gc_implementation/g1/g1CollectorPolicy.hpp]{
+379:   double predict_alloc_rate_ms() {
+380:     return get_new_prediction(_alloc_rate_ms_seq);
+381:   }
+//}
+
+@<code>{_alloc_rate_ms_seq}には過去の「割り当てたリージョン数/経過時間」レートの履歴を保持しており、その履歴情報から次の予測値を得ます。
+
+その後、@<code>{calculate_young_list_min_length()}の513行目で求めた予測値と次回の停止可能タイミングまでの時間（msec）をかけて、次回の停止可能タイミング付近までに割り当てられるだろうリージョン数の予測値をだします。
+最後の515行目で現在の新世代リージョン数上限とその数字を足して、部分的新世代GC用の新世代リージョン数上限が決定します。
