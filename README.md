@@ -18,7 +18,9 @@
  * 8.[GCスレッド（並列編）](http://www.narihiro.info/g1gc-impl-book/gc_thread_par.html)
  * 9.[GCスレッド（並行編）](http://www.narihiro.info/g1gc-impl-book/gc_thread_con.html)
  * 10.[並行マーキング](http://www.narihiro.info/g1gc-impl-book/mark.html)
- * x.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
+ * 11.[退避](http://www.narihiro.info/g1gc-impl-book/evac.html)
+ * 12.[予測とスケジューリング](http://www.narihiro.info/g1gc-impl-book/scheduling.html)
+ * 13.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
 以下から（ある時点で）最新のebookをダウンロードできます。
