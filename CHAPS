@@ -11,3 +11,4 @@ mark.re
 evac.re
 scheduling.re
 precise.re
+wbarrier.re
