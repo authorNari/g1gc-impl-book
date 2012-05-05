@@ -389,3 +389,7 @@ void make_handles(oop obj1, oop obj2) {
 //image[handle_area_with_handle_mark][make_handles()実行イメージ：ハンドルマーク有り]
 
 ただし、HotspotVMは多くの処理をJava言語で実装するというポリシーがありますので、上記の機能を使う機会はあまりありません。
+
+===[column]閑話休題
+
+//indepimage[coffee_with_gc]

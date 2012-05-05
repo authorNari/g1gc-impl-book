@@ -371,3 +371,7 @@ class Client {
 上記のように、@<code>{MutexLocker}クラスを利用するとロックが必要な処理の範囲がわかりやすくなります。
 また、大域脱出の際（例外発生時など）に、モニタのアンロックをし忘れる、といった凡ミスも防ぐことができます。
 そのため、HotspotVM内のコードではこの@<code>{MutexLocker}クラスや、Nullチェックの拡張を加えた@<code>{MutexLockerEx}クラスが多用されています。
+
+===[column]アニメとGCの関連性
+
+//indepimage[anime_with_gc]
