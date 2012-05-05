@@ -21,6 +21,7 @@
  * 11.[退避](http://www.narihiro.info/g1gc-impl-book/evac.html)
  * 12.[予測とスケジューリング](http://www.narihiro.info/g1gc-impl-book/scheduling.html)
  * 13.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
+ * 14.[ライトバリアのコスト](http://www.narihiro.info/g1gc-impl-book/wbarrier.html)
  * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
 以下から（ある時点で）最新のebookをダウンロードできます。
@@ -51,12 +52,6 @@
 ## 間違いの指摘・感想など
 
 [authorNari/g1gc-impl-book - GitHub](https://github.com/authorNari/g1gc-impl-book/)にissue登録するなり、コメントなり、pull requestするなり、ご自由にどうぞ！！
-
-## TODO
-以下について今後書きたいと思っています。
-
- * GCアルゴリズムの切り替え方法の解説
-   * ライトバリアを動的に切り替えても早い理由（たぶんJIT）
 
 ## ライセンス
 本書籍は[CC BY-SA 2.1](http://creativecommons.org/licenses/by-sa/2.1/jp/)とします。

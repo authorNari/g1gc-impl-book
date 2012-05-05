@@ -134,18 +134,154 @@ G1GCの場合には@<code>{G1SATBCardTableLoggingModRefBS}というクラスの�
 それぞれ@<code>{BarrierSet}クラスの仮想関数として定義してありますが、今のところ実装しているのは@<code>{G1SATBCardTableLoggingModRefBS}クラスだけです。
 つまり、現在のHotspotVMのライトバリアはG1GCとそれ以外のものの2種類を実行時に切り替えて動作しているのです。
 
-=== G1GCが入るまでライトバリアは切り替えてなかった
-調べて驚いたのですけど、G1GCが入る前（OpenJDK6以降）はライトバリアの実行時切り替えがないんですね。
+=== G1GCが入るまでライトバリアの種類はひとつだけだった
+調べて驚いたのですけど、G1GCが入る前（OpenJDK7より前）はライトバリアの実行時切り替えがないんですね。
 カードテーブルに書き換えられたことを記録するだけの単純なものだけしか実装されていませんでした（@<code>{CardTableModRefBSForCTRS}のみ）。
 よく考えてみたら世代別もインクリメンタルGCもそれだけでいけるんですよね…。
 G1GCのライトバリアが特殊すぎるだけだよな、と。
 
-OpenJDK7からはG1GCのおかげでライトバリアの切り替えが発生しますので、インタプリタのオブジェクトへの代入操作は少しだけ性能が劣化するでしょう。
+OpenJDK7からはG1GCの導入によってライトバリアの切り替えが発生しますので、インタプリタのオブジェクトへの代入操作は少しだけ性能が劣化するでしょう。
 
 == JITコンパイラのライトバリア
+HotspotVMではある程度の呼び出し回数を超えたメソッドはJITコンパイルするという特徴があります。
+もしメソッド内でオブジェクトフィールドへの代入があれば、ライトバリアの処理も一緒にマシン語にコンパイルされます。
+
+今まで実行時のライトバリアの切り替えは条件分岐が入ってしまいコストがかかるという話をしてきましたが、JITコンパイラが絡んでくるとこの状況は変わってきます。
 
 === C1コンパイラ
+JITコンパイラには@<b>{C1}、@<b>{C2}、@<b>{Shark}とよばれる3種類のコンパイラがあります。
+本書ではそのうちC1を取り上げたいと思います。
+
+C1はクライアントサイドで利用するシーンで使われるJITコンパイラで、Javaの起動オプションで@<code>{-client}を指定したときに利用されます。
+クライアント側で利用するためコンパイル時間が比較的短く、メモリ使用量も少ない代わりにまぁまぁの最適化をおこなうという特徴があります。
 
 === ライトバリアのマシン語生成
+オブジェクトフィールドへの代入操作をJITコンパイルしている箇所は@<code>{LIRGenerator}クラスの@<code>{do_StoreField()}というメンバ関数です。
+
+//source[share/vm/c1/c1_LIRGenerator.cpp]{
+1638: void LIRGenerator::do_StoreField(StoreField* x) {
+
+1708:   if (is_oop) {
+1710:     pre_barrier(LIR_OprFact::address(address),
+1711:                 LIR_OprFact::illegalOpr /* pre_val */,
+1712:                 true /* do_load*/,
+1713:                 needs_patching,
+1714:                 (info ? new CodeEmitInfo(info) : NULL));
+1715:   }
+1716: 
+1717:   if (is_volatile && !needs_patching) {
+1718:     volatile_field_store(value.result(), address, info);
+1719:   } else {
+1720:     LIR_PatchCode patch_code =
+            needs_patching ? lir_patch_normal : lir_patch_none;
+1721:     __ store(value.result(), address, info, patch_code);
+1722:   }
+1723: 
+1724:   if (is_oop) {
+1726:     post_barrier(object.result(), value.result());
+1727:   }
+
+//}
+
+1717〜1722行目がオブジェクトフィールドへの代入操作のマシン語を生成している部分です。
+ライトバリアの生成は@<code>{pre_barrier()}と@<code>{post_barrier()}の中でおこなわれます。
+
+まずは@<code>{pre_barrier()}を見てみましょう。
+
+//source[share/vm/c1/c1_LIRGenerator.cpp]{
+1386: void LIRGenerator::pre_barrier(
+             LIR_Opr addr_opr, LIR_Opr pre_val,
+1387:        bool do_load, bool patch, CodeEmitInfo* info) {
+1389:   switch (_bs->kind()) {
+
+1391:     case BarrierSet::G1SATBCT:
+1392:     case BarrierSet::G1SATBCTLogging:
+1393:       G1SATBCardTableModRef_pre_barrier(
+              addr_opr, pre_val, do_load, patch, info);
+1394:       break;
+
+1396:     case BarrierSet::CardTableModRef:
+1397:     case BarrierSet::CardTableExtension:
+1398:       // No pre barriers
+1399:       break;
+1400:     case BarrierSet::ModRef:
+1401:     case BarrierSet::Other:
+1402:       // No pre barriers
+1403:       break;
+1404:     default      :
+1405:       ShouldNotReachHere();
+1406: 
+1407:   }
+1408: }
+//}
+
+1389行目に登場している@<code>{kind()}というのはインタプリタのライトバリアで説明したのと同じものです。
+もしG1GCのものであれば、1393行目のcase文に入りG1GC用のライトバリアをおこなうマシン語を生成します。
+それ以外であれば何も生成しません。
+1400〜1403行目のcaseは通らない場所なので単純に無視してください。
+
+
+次に@<code>{post_barrier()}を見てみます。
+
+//source[share/vm/c1/c1_LIRGenerator.cpp]{
+1410: void LIRGenerator::post_barrier(
+             LIR_OprDesc* addr, LIR_OprDesc* new_val) {
+1411:   switch (_bs->kind()) {
+
+1413:     case BarrierSet::G1SATBCT:
+1414:     case BarrierSet::G1SATBCTLogging:
+1415:       G1SATBCardTableModRef_post_barrier(addr,  new_val);
+1416:       break;
+
+1418:     case BarrierSet::CardTableModRef:
+1419:     case BarrierSet::CardTableExtension:
+1420:       CardTableModRef_post_barrier(addr,  new_val);
+1421:       break;
+1422:     case BarrierSet::ModRef:
+1423:     case BarrierSet::Other:
+1424:       // No post barriers
+1425:       break;
+1426:     default      :
+1427:       ShouldNotReachHere();
+1428:     }
+1429: }
+//}
+
+こちらも同じように@<code>{kind()}の値をみてどのライトバリアを生成するか決定しています。
+G1GCであれば1415行目でG1GC用のライトバリアを生成します。
+それ以外であれば1420行目でカードテーブルに単純に書き換えを記録するライトバリアを生成します。
+1422〜1424行目のcaseは通らない場所なので単純に無視します。
+
+このようにJITコンパイラの時点ではすでに利用するGCアルゴリズムは決定しているので、そのGCにあったライトバリアを生成することができます。
+そのため、JITコンパイルされたコードではライトバリア切り替えのコストが0で済むのです。
+
+JITさん、カワイイ…。
 
 == おわりに
+もう終わりですし、きっとこんなところはみんな読み飛ばしそうなのでグチをこぼしておきたいとおもいます。
+
+題して「OpenJDKのソースコードのどこが読みづらいか」。
+
+端的に言えば抽象化をやりすぎているところが読みづらいです。
+
+たとえばコールバック地獄。
+関数の引数にとったインスタンスの関数を呼び出して、さらにその呼び出した関数の引数にとったインスタンスの関数を呼び出して、さらに…みたいなコードが平気であるわけですよ。
+
+（コールバックの使いすぎには注意って小一時間説教したい！）
+
+あと継承地獄。
+継承関係が4階層・5階層と平気であります。これはさすがにコード読んでいて迷います。
+またクラス分けの粒度が歴史的な背景もあってツギハギになっている箇所がちらほらあり、とてもじゃないですが一貫性があるとは思えない。
+一貫性があればまだ覚えられるのですが…。
+
+（一度ソースコードを窓から捨てることをお勧めしたくなる！）
+
+とはいえ、やはり現在進行形で拡張され続けているソースコードだけあって、抽象化は大変うまくできています。
+VMとOS間の抽象化も実用的にできているし、GCも容易に追加できるようになっているし。
+慣れ親しんだ開発者にとってはとてもハックしやすい、まさに「おれたちのVM」感があって憎めないな、と感じました。
+
+ブツブツ文句をいいながらも楽しみながら読めたのはやはりOpenJDKを実装してきてくれた開発者のみなさんのおかげです。
+こんなに楽しく読めるものをほんとうにありがとうございます（皮肉じゃないよ）。
+拡張して成長していくさまを、また眺めにきます！
+
+おしまい！

@@ -189,7 +189,7 @@ HotspotVMは「Aは次回のテストで47点を取る」と予測します。
 この@<code>{TruncatedSeq}は@<code>{AbsSeq}クラスを継承した履歴を保持するクラスです。
 では、履歴を追加する@<code>{add()}メンバ関数を見てみましょう。
 
-//source[src/share/vm/utilities/numberSeq.cpp]{
+//source[share/vm/utilities/numberSeq.cpp]{
 36: void AbsSeq::add(double val) {
 37:   if (_num == 0) {
 39:     _davg = val;
