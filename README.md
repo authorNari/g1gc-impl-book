@@ -67,7 +67,7 @@
 
 ![中村成洋](http://1.gravatar.com/avatar/9f859654c118bcd2f67cc763baf0de7a?size=150 "中村成洋")
 
-株式会社ネットワーク応用通信研究所に勤務。ただのGC好き。以下は今までの著作物。
+ただのGC好き。以下は今までの著作物。
 
 * [『ガベージコレクションのアルゴリズムと実装』](http://amazon.co.jp/o/ASIN/4798025623/authornari-22)
 * [徹底解剖「G1GC」 アルゴリズム編](http://tatsu-zine.com/books/g1gc)
