@@ -196,7 +196,8 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
  5. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
  6. スレッドIDを受け取る変数へのポインタ。
 
-加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。このフラグの詳細については@<hd>{Windowsのスレッド生成|STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ}にて後述します。
+加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。
+このフラグの詳細はすぐ後の項で説明します。
 
 606、607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
 

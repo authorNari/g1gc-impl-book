@@ -22,8 +22,6 @@
 66:     wideKlassOop    _klass;
 67:     narrowOop       _compressed_klass;
 68:   } _metadata;
-69: 
-71:   static BarrierSet* _bs;
 //}
 
 64行目の@<code>{_mark}変数はオブジェクトのヘッダとなる部分です。
@@ -34,8 +32,6 @@
 この共用体にはほとんどの場合、66行目の@<code>{_klass}変数の値が格納されます。
 @<code>{_klass}変数はその名前の通りオブジェクトのクラスへのポインタを格納します。
 67行目の@<code>{_compressed_klass}は本章ではGCとは関係ないため特に触れません。
-
-//comment[TODO BarrierSetの話。]
 
 HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタンスへのポインタ（@<code>{oopDesc*}）を@<code>{typedef}で別名定義しています。
 
@@ -174,3 +170,6 @@ Javaプログラムを見ると3行目の@<code>{getClass()}メソッドの結�
 //footnote[virtual_function][仮想関数：子クラスで再定義可能な関数のこと。C++上の文法でメンバ関数に virtual を付けると仮想関数となる]
 //footnote[vtable][仮想関数テーブル：実行時に呼び出すメンバ関数の情報を格納している]
 
+//comment[== TODO: markOop]
+
+//comment[フォワーディングポインタなどの話。オブジェクトのヘッダ。]
