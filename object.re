@@ -57,8 +57,6 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 @<code>{oop}等の別名定義は今後、頻繁に登場するため意味も含めてしっかりと抑えておいてください。
 本章では@<code>{oopDesc}等のインスタンスを別名定義のルールに従って@<code>{oop}のように呼ぶことにします。
 
-//comment[TODO GCに必要な点はあとで追記していく]
-
 == klassOopDescクラス
 
 @<code>{oopDesc}クラスを継承している@<code>{klassOopDesc}クラスはJava上のクラスを表すクラスです。
@@ -90,8 +88,6 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 つまり、外側は@<code>{klassOop}だとしても内部には@<code>{instanceKlass}や@<code>{symbolKlass}等がなどが入っているということです（@<img>{klassOop_box}）。
 
 //image[klassOop_box][klassOopはKlassの箱]
-
-//comment[TODO GCに必要な点はあとで追記していく]
 
 == クラスの関係
 
