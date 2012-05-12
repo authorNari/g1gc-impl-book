@@ -166,6 +166,121 @@ Javaプログラムを見ると3行目の@<code>{getClass()}メソッドの結�
 //footnote[virtual_function][仮想関数：子クラスで再定義可能な関数のこと。C++上の文法でメンバ関数に virtual を付けると仮想関数となる]
 //footnote[vtable][仮想関数テーブル：実行時に呼び出すメンバ関数の情報を格納している]
 
-//comment[== TODO: markOop]
+== オブジェクトのヘッダ
+@<hd>{oopDescクラス}で少し取り上げたオブジェクトのヘッダについてもう少し説明しておきましょう。
+オブジェクトのヘッダは@<code>{markOopDesc}クラスで表現されます。
+その実体はただの1ワードのメモリ空間です。
 
-//comment[フォワーディングポインタなどの話。オブジェクトのヘッダ。]
+//source[share/vm/oops/markOop.hpp]{
+104: class markOopDesc: public oopDesc {
+105:  private:
+107:   uintptr_t value() const { return (uintptr_t) this; }
+//}
+
+107行目の@<code>{value()}がインスタンスの実体です。
+@<code>{this}を@<code>{uintptr_t}にキャストして返しているだけなことがわかります。
+
+ヘッダ内の主な情報として以下のものが詰め込まれます。
+
+ * オブジェクトのハッシュ値
+ * 年齢（世代別GCに利用）
+ * ロックフラグ
+
+1ワードが64bitか32bitによって入る値がことなりますが、大体上記のような情報が入っていると思えばよいでしょう。
+
+=== フォワーディングポインタ
+オブジェクトヘッダの使い方の実例として、コピーGCに利用されるフォワーディングポインタとしての利用方法を見てみましょう。
+
+以下にG1GCのオブジェクトをコピーするメンバ関数を示します。
+
+//source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
+4369: oop G1ParCopyHelper::copy_to_survivor_space(oop old) {
+
+4370:   size_t    word_sz = old->size();
+
+4382:   HeapWord* obj_ptr = _par_scan_state->allocate(alloc_purpose, word_sz);
+4383:   oop       obj     = oop(obj_ptr);
+
+4395:   oop forward_ptr = old->forward_to_atomic(obj);
+4396:   if (forward_ptr == NULL) {
+          // オブジェクトのコピー
+4397:     Copy::aligned_disjoint_words((HeapWord*) old, obj_ptr, word_sz);
+
+4457:   }
+4458:   return obj;
+4459: }
+//}
+
+引数にはコピー元のオブジェクトへのポインタ（@<code>{oop}）を@<code>{old}を受け取ります。
+4370行目でオブジェクトのサイズを取得し、サイズ分のオブジェクトを4382行目で新たに割り当てます。
+4383行目で割り当てた領域に対するアドレスを@<code>{oop}にキャストします。
+
+そして、4395行目の@<code>{forward_to_atomic()}がフォワーディングポインタを作成するメンバ関数です。
+このメンバ関数は並行に動く可能性がありますので、途中で他のスレッドに割り込まれて先にコピーされてしまった場合は@<code>{NULL}を返します。
+無事、フォワーディングポインタを設定できたら、4397行目で実際にオブジェクトの内容をコピーし、4458行目でコピー先のアドレスを返します。
+
+では、@<code>{forward_to_atomic()}メンバ関数の中身を見てみましょう。
+
+//source[share/vm/oops/oop.pcgc.inline.hpp]{
+76: inline oop oopDesc::forward_to_atomic(oop p) {
+
+79:   markOop oldMark = mark();
+80:   markOop forwardPtrMark = markOopDesc::encode_pointer_as_mark(p);
+81:   markOop curMark;
+
+86:   while (!oldMark->is_marked()) {
+87:     curMark = (markOop)Atomic::cmpxchg_ptr(
+                             forwardPtrMark, &_mark, oldMark);
+
+89:     if (curMark == oldMark) {
+90:       return NULL;
+91:     }
+
+95:     oldMark = curMark;
+96:   }
+97:   return forwardee();
+98: }
+//}
+
+79行目でコピー元のオブジェクトのヘッダをローカル変数の@<code>{oldMark}に格納します。
+次に80行目でコピー先のアドレスをフォワーディングポインタにエンコードします。
+この静的メンバ関数の中身は後述します。
+
+その後、86〜96行目で、CAS命令を利用して不可分にフォワーディングポインタをコピー元のオブジェクトの@<code>{_mark}に書き込みます。
+97行目の@<code>{forwardee()}でフォワーディングポインタをデコードし、呼び出し元に返します。
+この関数の役割は後述するマークビットを外すだけしかありません。
+
+以下にフォワーディングポインタをエンコードする@<code>{encode_pointer_as_mark()}を示します。
+
+//source[share/vm/oops/markOop.hpp]{
+363:   inline static markOop encode_pointer_as_mark(void* p) {
+         return markOop(p)->set_marked();
+       }
+//}
+
+受け取ったポインタを@<code>{markOop}にキャストして、@<code>{set_marked()}を呼び出しているだけですね。
+
+//source[share/vm/oops/markOop.hpp]{
+158:   enum { locked_value             = 0,
+              // ...
+161:          marked_value             = 3,
+              // ...
+163:   };
+
+333:   markOop set_marked()   {
+         return markOop((value() & ~lock_mask_in_place) | marked_value);
+       }
+//}
+
+@<code>{set_marked()}は下位2ビットを@<code>{1}にする、マークビットを立てるメンバ関数です。
+オブジェクトへのポインタは下位2ビットが必ず@<code>{0}になるようにアラインメントされることを利用したハックですね。
+
+上記のマークによって、オブジェクトがすでにコピーされているか判断することが出来ます。
+
+//source[share/vm/oops/oop.inline.hpp]{
+641: inline bool oopDesc::is_forwarded() const {
+644:   return mark()->is_marked();
+645: }
+//}
+
+G1GCやその他のコピーGCでは上記の@<code>{is_forwarded()}を確認し、マークが付いているものは再度コピーしないようにします。
