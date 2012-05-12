@@ -1,6 +1,6 @@
 = スポンサーのみなさま
 
-本書は下記のスポンサーのみなさまの応援によって執筆されています！！　ありがとうございます！！
+本書は下記のスポンサーのみなさまのサポートによって執筆されました！！　ありがとうございます！！
 
 @<icon>{yamaz-sama} @<href>{http://pledgie.com/accounts/@yamaz, @yamaz様}
 
@@ -84,6 +84,5 @@
 
 @<icon>{tadsaito-sama} @<href>{http://pledgie.com/accounts/tadsaito, Tadashi Saito様}
 
-本書は上記の方々から寄付をいただいて執筆されています。
-詳細は@<href>{http://www.narihiro.info/g1gc-impl-book/}を参照ください（@<b>{寄付の受付は終了しています}）。
+本書は上記の方々から寄付をいただいて執筆されました。
 
