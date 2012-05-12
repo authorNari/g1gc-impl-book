@@ -84,7 +84,17 @@ share		共通コード群
 @<table>{dir}内最後の「share」ディレクトリ内には「vm」というディレクトリがあります。
 この「vm」ディレクトリの中にHotspotVMの大半部分のコードが置かれています。
 
-//comment[TODO: vm内ディレクトリ構成]
+//table[vmdir][vm内ディレクトリ構成]{
+ディレクトリ	概要
+------------------------------
+c1			C1コンパイラ
+classfile		Javaクラスファイル定義
+gc_implementation	GCの実装部
+gc_interface		GCのインターフェイス部
+interpreter		Javaインタプリタ
+oops			オブジェクト構造定義
+runtime			VM実行時に必要なライブラリ
+//}
 
 また、「src」ディレクトリ内のソースコード分布を@<table>{source_stat}に示します。
 
