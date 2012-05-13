@@ -195,3 +195,7 @@ blockquote {
   margin:0 0 8px;
   padding:8px;
 }
+
+.flushright {
+  text-align: right;
+}

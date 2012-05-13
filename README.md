@@ -22,7 +22,8 @@
  * 12.[予測とスケジューリング](http://www.narihiro.info/g1gc-impl-book/scheduling.html)
  * 13.[正確なGCへの道](http://www.narihiro.info/g1gc-impl-book/precise.html)
  * 14.[ライトバリアのコスト](http://www.narihiro.info/g1gc-impl-book/wbarrier.html)
- * [参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
+ * [さらに勉強したい人へ](http://www.narihiro.info/g1gc-impl-book/next.html)
+ * [その他参考文献](http://www.narihiro.info/g1gc-impl-book/bib.html)
 
 以下から（ある時点で）最新のebookをダウンロードできます。
 
