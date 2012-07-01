@@ -144,7 +144,7 @@ VMヒープからオブジェクトをアロケーションする際には新世
 //}
 
 77行目の@<code>{thread_num()}で生成する@<code>{ConcurrentG1RefineThread}インスタンスの数が決まります。
-この@<code>{thread_num()}の値は@<code>{G1ConcRefinementThreads}というユーザが起動オプションに指定できる値でも変更可能です。
+この@<code>{thread_num()}の値は@<code>{G1ConcRefinementThreads}という言語利用者が起動オプションに指定できる値でも変更可能です。
 
 @<code>{ConcurrentG1RefineThread}クラスはインスタンスを作った時点でスレッドの生成・起動をおこないます。
 86行目でインスタンスを生成すると同時に、退避用記憶集合維持スレッドは動き出します。
