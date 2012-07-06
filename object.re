@@ -1,6 +1,7 @@
 = オブジェクト構造
 
-本章ではオブジェクトのデータ構造を見ていきます。
+本章ではVMヒープに対して割り当てられるオブジェクトのデータ構造を見ていきます。
+割り当てられたオブジェクトは当然ながらGCの対象となります。
 
 == oopDescクラス
 
@@ -31,9 +32,9 @@
 それが65行目に共用体で定義されている@<code>{_metadata}変数です。
 この共用体にはほとんどの場合、66行目の@<code>{_klass}変数の値が格納されます。
 @<code>{_klass}変数はその名前の通りオブジェクトのクラスへのポインタを格納します。
-67行目の@<code>{_compressed_klass}は本章ではGCとは関係ないため特に触れません。
+67行目の@<code>{_compressed_klass}はGCとは関係ないため本書では特に触れません。
 
-HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタンスへのポインタ（@<code>{oopDesc*}）を@<code>{typedef}で別名定義しています。
+HotspotVMでは、@<code>{oopDesc}クラスのインスタンスへのポインタ（@<code>{oopDesc*}）などを@<code>{typedef}で別名定義しています。
 
 //source[share/vm/oops/oopsHierarchy.hpp]{
 42: typedef class oopDesc*                            oop;
@@ -54,7 +55,7 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 すべて@<code>{Desc}を取り除いた名前に別名定義されています。
 @<code>{oopDesc}の@<code>{Desc}は「Describe（表現）」の略です。
 つまり、@<code>{oopDesc}とは@<code>{oop}という実体（オブジェクト）をクラスとして「表現」しているものなのです。
-@<code>{oop}等の別名定義は今後、頻繁に登場するため意味も含めてしっかりと抑えておいてください。
+@<code>{oop}などの別名定義は今後、頻繁に登場するため意味も含めてしっかりと抑えておいてください。
 本章では@<code>{oopDesc}等のインスタンスを別名定義のルールに従って@<code>{oop}のように呼ぶことにします。
 
 == klassOopDescクラス
@@ -65,10 +66,10 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 このテクニックは多くの言語処理系でよく見かけます。
 
 前の@<hd>{oopDescクラス}の項で説明した通り、全オブジェクトは@<code>{klassOop}を持っています。
-@<code>{klassOopDesc}も@<code>{oopDesc}を継承しているため、@<code>{klassOop}を持っています。
+また@<code>{klassOopDesc}自体も@<code>{oopDesc}を継承しているため、@<code>{klassOop}をメンバ変数として持っています。
 
 @<code>{klassOop}の特徴は内部に@<code>{Klass}クラスのインスタンスを保持しているということです。
-実は@<code>{klassOopDesc}クラス自体に情報はほとんどなく、@<code>{klassOop}は内部に@<code>{Klass}クラスのインスタンスを保持するただの箱にすぎません。
+実は@<code>{klassOopDesc}クラス自体に情報はほとんどなく、@<code>{klassOop}は内部に@<code>{Klass}インスタンスを保持するただの箱にすぎません。
 
 == Klassクラス
 
@@ -81,7 +82,7 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 //image[klass_hierarchy][Klassクラスの継承関係]
 
 @<code>{Klass}クラスの子クラスには、@<code>{oopDesc}の子クラスと対応するクラスが存在します。
-@<code>{oopDesc}の子クラスである@<code>{XXDesc}のインスタンスがもつ@<code>{klassOop}内には、@<code>{XXDesc}に対応した@<code>{XXKlass}のインスタンスが格納さているということです。
+そのような@<code>{XXDesc}のインスタンスには、@<code>{XXDesc}に対応した@<code>{XXKlass}を保持する@<code>{klassOop}が格納されます。
 
 前の@<hd>{klassOopDescクラス}の項で@<code>{klassOop}はただの箱だといいました。
 @<code>{klassOop}はオブジェクトとして@<code>{Klass}やその子クラスを統一的にあつかうためのインタフェースだといえるでしょう。
@@ -91,11 +92,11 @@ HotspotVMでは@<code>{oopDesc}クラスやその子クラスのインスタン�
 
 == クラスの関係
 
-では、1つのオブジェクトを例にとって@<code>{oop}と@<code>{Klass}の関係を見ていきましょう。
+では、1つのオブジェクトを例にとって@<code>{oop}と@<code>{Klass}の関係を具体的に見ていきましょう。
 
 次のような@<code>{String}クラスのオブジェクトを生成するJavaプログラムがあったとします。
 
-//emlistnum{
+//listnum[new_string][Stringオブジェクトを生成するJavaプログラム]{
 String str = new String();
 System.out.println(str.getClass()); // => java.lang.String
 System.out.println(str.getClass().getClass()); // => java.lang.Class
@@ -107,19 +108,19 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 
 //image[oop_by_string][Stringオブジェクトのoop]
 
-@<code>{instanceOop}はJava上のインスタンスと同じ意味を持ちます。
-つまり、「new String()」をVMで評価すると@<code>{instanceOop}が1つ生成されます。
+@<code>{instanceOop}はJava上のインスタンスへの参照と同じ意味を持ちます。
+「new String()」をVMで評価すると@<code>{instanceOopDesc}のインスタンスが1つ生成されます。
 
-@<code>{instanceOop}のクラスはもちろん@<code>{klassOop}です。
-そして、@<code>{klassOop}の中には@<code>{instanceKlass}のインスタンスが格納されています。
-この@<code>{klassOop}はJava上の@<code>{String}クラスと対応しています。
+@<code>{instanceOop}は@<code>{klassOop}をもちます。
+そして、その@<code>{klassOop}の中には@<code>{instanceKlass}のインスタンスが格納されています。
+この@<code>{klassOop}は、@<list>{new_string}の2行目で示したJava上の@<code>{String}クラスと対応しています。
 
-次に、Java上のStringクラスの@<code>{klassOop}のクラスは同じく@<code>{klassOop}です。
+次に、Java上のStringクラスの@<code>{klassOop}は同じく@<code>{klassOop}を持ちます。
 この@<code>{klassOop}の中には@<code>{instanceKlassKlass}のインスタンスが格納されています。
 
 @<code>{instanceKlassKlass}は@<code>{instanceKlass}のクラスです。
-@<code>{instanceKlassKlass}をもつ@<code>{klassOop}のクラスは自分自身であるため、@<code>{instanceOop}から続くクラスの連鎖を止める役割を持っています。
-Javaプログラムを見ると3行目の@<code>{getClass()}メソッドの結果と、4行目の@<code>{getClass()}メソッドの結果が同じ値になっています。
+@<code>{instanceKlassKlass}をもつ@<code>{klassOop}は自分自身を@<code>{_klass}にもち、@<code>{instanceOop}から続くクラスの連鎖を収束させる役割を持っています。
+@<list>{new_string}を見ると3行目の@<code>{getClass()}メソッドの結果と、4行目の@<code>{getClass()}メソッドの結果が同じ値になっています。
 これはクラスの連鎖が@<code>{instanceKlassKlass}のところでループしているためです。
 
 == oopDescクラスに仮想関数を定義してはいけない

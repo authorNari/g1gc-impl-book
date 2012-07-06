@@ -1,23 +1,22 @@
 = ヒープ構造
 
-本章ではG1GCのVMヒープ構造について述べます。
+本章ではG1GCのVMヒープ構造について説明します。
 
 == VMヒープ
 
-HotspotVMのVMヒープは大きく次の2つに分かれます。
+HotspotVMのVMヒープは大きく次の2つの部分にわかれます。
 
  1. 選択したGC用のメモリ領域
  2. パーマネント（Permanent）領域
 
 //image[vm_heap][VMヒープの全体像]
 
-Java（HotspotVM）の利用者はGCアルゴリズムを選択することができました。
-HotspotVMは言語利用者によってGCアルゴリズムが選択されると、そのGC用の構造を持つメモリ領域を作成します。
-それが1.です。このメモリ領域に選択したGCの対象オブジェクトを割り当てます。
+HotspotVMは言語利用者によってGCアルゴリズムが選択されると、そのGCに適した構造のメモリ領域を作成します。
+それが1.です。このメモリ領域に対して、選択したGCの対象となるオブジェクトを割り当てていきます。
 
 2.のパーマネント領域のPermanentには「永続的な」という意味があります。
-この名前の通り、パーマネント領域には型情報（@<code>{klassOop}）やメソッド情報（@<code>{methodOop}）等の長生きするオブジェクトが割り当てられます。
-パーマネント領域はGCアルゴリズムが変更されてもほぼ同じ構造でVMヒープの一部として確保されます。
+この名前の通り、パーマネント領域には型情報やメソッド情報等の長生きするオブジェクトが割り当てられます。
+GCアルゴリズムの違いでパーマネント領域の構造が変わることはほぼありません。
 
 === VMヒープクラスの初期化
 
@@ -33,7 +32,7 @@ HotspotVMは言語利用者によってGCアルゴリズムが選択されると
 497:   virtual void collect(GCCause::Cause cause) = 0;
 //}
 
-@<code>{CollectedHeap}は@<code>{CHeapObj}を継承しており、上記のようにさまざまインタフェースを定義します。
+@<code>{CollectedHeap}は上記のようにさまざまインタフェースを持っています。
 
 適切なVMヒープクラスは@<code>{Universe::initialize_heap()}で選ばれます。
 
@@ -65,9 +64,9 @@ HotspotVMは言語利用者によってGCアルゴリズムが選択されると
 //}
 
 GCアルゴリズムとVMヒープクラスの対応については@<hd>{abstract|CollectorPolicyクラス}ですでに述べました。
-ここでは、適切なVMヒープクラスのインスタンスが生成され、最終的に@<code>{initialize()}を呼び出す点と、@<code>{Universe::_collectedHeap}に格納される点を抑えておいてください。
+ここでは、適切なVMヒープクラスのインスタンスが生成され、@<code>{Universe::_collectedHeap}に格納されたあと、最終的に@<code>{initialize()}を呼び出す点を抑えておいてください。
 
-次に示す通り、@<code>{Universe}クラスは@<code>{AllStatic}クラスを継承したクラスです。
+@<code>{Universe}クラスは次に示す通り@<code>{AllStatic}クラスを継承したクラスです。
 
 //source[share/vm/memory/universe.hpp]{
 113: class Universe: AllStatic {
@@ -130,7 +129,6 @@ G1GCのヒープは『アルゴリズム編 1.2 ヒープ構造』で示した�
 
 2.の@<code>{_next_in_special_set}メンバ変数はリージョンが所属する集合によって意味の違う様々なリージョンを指します。
 具体的に言えば、リージョンがフリーリージョンリストに所属するときには、次の空リージョンがつながれ、回収集合のリストに所属するときには、次のGC対象である使用中のリージョンがつながれます。
-@<code>{_next_in_special_set}メンバ変数は用途によって様々な使い方がされるということを覚えておいてください。
 
 また、@<code>{_next_in_special_set}メンバ変数にリージョンをつなぐとき、@<code>{_next_in_special_set}メンバ変数が何の用途に使われているかを覚えておくため、「このリージョンはこの集合に所属しています」というフラグを立てておきます。
 
@@ -174,6 +172,6 @@ G1GCのヒープは『アルゴリズム編 1.2 ヒープ構造』で示した�
 
 G1GCのパーマネント領域は@<code>{CompactingPermGenGen}クラスによって管理されています。
 
-@<code>{g1CollectedHeap}クラスの@<code>{_perm_gen}というメンバ変数に@<code>{CompactingPermGenGen}クラスのインスタンスへのポインタが格納されます。
+@<code>{g1CollectedHeap}クラスの@<code>{_perm_gen}というメンバ変数に@<code>{CompactingPermGenGen}インスタンスへのポインタが格納されます。
 
 パーマネント領域はG1GCではなく、マークコンパクトGCの対象となります。そのため、本章では詳細な説明は行いません。
