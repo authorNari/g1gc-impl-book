@@ -109,16 +109,17 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 //image[oop_by_string][Stringオブジェクトのoop]
 
 @<code>{instanceOop}はJava上のインスタンスへの参照と同じ意味を持ちます。
-「new String()」をVMで評価すると@<code>{instanceOopDesc}のインスタンスが1つ生成されます。
+@<img>{oop_by_string}左端の@<code>{instanceOop}は、「new String()」の評価時に生成された@<code>{instanceOopDesc}のインスタンスへのポインタを示しています。
 
-@<code>{instanceOop}は@<code>{klassOop}をもちます。
-そして、その@<code>{klassOop}の中には@<code>{instanceKlass}のインスタンスが格納されています。
-この@<code>{klassOop}は、@<list>{new_string}の2行目で示したJava上の@<code>{String}クラスと対応しています。
+@<code>{instanceOop}は自身の@<code>{_klass}変数（オブジェクトのクラスを示す変数）に@<code>{klassOop}をもちます。
+そして、その@<code>{klassOop}の中には@<code>{instanceKlass}のインスタンスが格納されます。
+@<img>{oop_by_string}中央の@<code>{klassOop}は、@<list>{new_string}の2行目で示したJava上の@<code>{String}クラスと対応しています。
 
-次に、Java上のStringクラスの@<code>{klassOop}は同じく@<code>{klassOop}を持ちます。
+次に、図中央の@<code>{klassOop}（＝Java上のStringクラス）は同じく@<code>{klassOop}を持ちます。
 この@<code>{klassOop}の中には@<code>{instanceKlassKlass}のインスタンスが格納されています。
+@<img>{oop_by_string}右端の@<code>{klassOop}が上記を表しており、@<list>{new_string}の3行目で示したJava上の@<code>{Class}クラスと対応しています。
 
-@<code>{instanceKlassKlass}は@<code>{instanceKlass}のクラスです。
+@<code>{instanceKlassKlass}は@<code>{instanceKlass}のクラスを示します。
 @<code>{instanceKlassKlass}をもつ@<code>{klassOop}は自分自身を@<code>{_klass}にもち、@<code>{instanceOop}から続くクラスの連鎖を収束させる役割を持っています。
 @<list>{new_string}を見ると3行目の@<code>{getClass()}メソッドの結果と、4行目の@<code>{getClass()}メソッドの結果が同じ値になっています。
 これはクラスの連鎖が@<code>{instanceKlassKlass}のところでループしているためです。
@@ -127,10 +128,11 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 
 @<code>{oopDesc}クラスにはC++の仮想関数（virtualfunction）@<fn>{virtual_function}を定義してはいけない決まりになっています。
 
-その理由はクラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル@<fn>{vtable}へのポインタを付けてしまうからです。
-すべてのオブジェクトに1ワード確保されては困りものです。そのため、@<code>{oopDesc}クラスにはC++の仮想関数を定義できないルールとなっています。
+クラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル@<fn>{vtable}へのポインタを勝手に付けてしまいます。
+もし@<code>{oopDesc}に仮想関数を定義するとすべてのオブジェクトに対して1ワードが確保されてしまいます。
+これは空間効率が悪いので、@<code>{oopDesc}クラスにはC++の仮想関数を定義できないルールとなっています。
 
-もし、仮想関数を使って子クラス毎に違う振る舞いをするメンバ関数を定義したい場合は@<code>{oopDesc}ではなく、対応する@<code>{Klass}の方に仮想関数を定義します。
+もし、仮想関数を使って子クラス毎に違う振る舞いをするメンバ関数を定義したい場合は@<code>{oopDesc}ではなく、対応する@<code>{Klass}の方に仮想関数を定義しなければなりません。
 
 次にその一部を示します。
 ここでは自分がJava上でどのような意味をもつオブジェクトかを判断する仮想関数が定義されています。
@@ -170,16 +172,6 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 == オブジェクトのヘッダ
 @<hd>{oopDescクラス}で少し取り上げたオブジェクトのヘッダについてもう少し説明しておきましょう。
 オブジェクトのヘッダは@<code>{markOopDesc}クラスで表現されます。
-その実体はただの1ワードのメモリ空間です。
-
-//source[share/vm/oops/markOop.hpp]{
-104: class markOopDesc: public oopDesc {
-105:  private:
-107:   uintptr_t value() const { return (uintptr_t) this; }
-//}
-
-107行目の@<code>{value()}がインスタンスの実体です。
-@<code>{this}を@<code>{uintptr_t}にキャストして返しているだけなことがわかります。
 
 ヘッダ内の主な情報として以下のものが詰め込まれます。
 
@@ -187,7 +179,61 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
  * 年齢（世代別GCに利用）
  * ロックフラグ
 
-1ワードが64bitか32bitによって入る値がことなりますが、大体上記のような情報が入っていると思えばよいでしょう。
+=== トリッキーなmarkOopDesc
+ヘッダを表す@<code>{markOopDesc}クラスはかなりトリッキーなコードになっています。
+著者はC++にあまり馴染みがないので「こんな書き方もできるのか…」と驚かされました。
+
+@<code>{markOopDesc}は1ワードのデータだけをヘッダとして利用するクラスです。
+@<code>{markOopDesc}の利用イメージを以下に示します。
+
+//listnum[mark_oop_desc_01][@<code>{markOopDesc}の利用イメージ]{
+markOopDesc* header;
+uintptr_t some_word = 1;
+
+header = (markOopDesc*)some_word;
+header->is_marked();  // マーク状態を調べる
+//}
+
+1行目で@<code>{markOopDesc*}のローカル変数を定義し、2行目では@<code>{uintptr_t}、つまり1ワードのデータをローカル変数で定義しています。
+
+4行目でそれを@<code>{markOopDesc*}にキャストし、5行目で関数呼び出し…。
+さて、@<code>{some_word}は@<code>{1}だったはずです。
+つまり、5行目では@<code>{1}というアドレス上のデータをインスタンスとみなして関数呼び出ししているのですから、SEGVが起こってもおかしくないような…？
+
+実は@<code>{markOopDesc}クラス自体はインスタンスを生成せず、自身のアドレス（@<code>{this}）しか利用しないように実装されています。
+自身のアドレスをヘッダ用の情報として利用するクラスなのです。
+
+//source[share/vm/oops/markOop.hpp]{
+104: class markOopDesc: public oopDesc {
+105:  private:
+107:   uintptr_t value() const { return (uintptr_t) this; }
+
+221:   bool is_marked()   const {
+222:     return (mask_bits(value(), lock_mask_in_place) == marked_value);
+223:   }
+//}
+
+107行目の@<code>{value()}という@<code>{this}を返すものをベースにさまざまなメンバ関数が実装されています。
+利用例として221〜223行目に@<code>{is_marked()}というマーク済みかどうかを返すメンバ関数をみてみましょう。
+222行目では@<code>{value()}で得た1ワードデータをマスクし、マークビットが立っているかどうかを判断して結果を返しています。
+
+さて、104行目で@<code>{oopDesc}クラスを一応継承していますが、これはまったく利用しません。
+@<code>{oopDesc}からいくらかのメンバ変数も継承しますが、@<code>{markOopDesc}はインスタンスを持たないのでこれらも使うことができません。
+じゃあ、なぜこんな余計なクラスを継承しているのか、という話ですが、きちんとコメントが書いてありました。
+
+//source[share/vm/oops/markOop.hpp]{
+32: // Note that the mark is not a real oop but just a word.
+33: // It is placed in the oop hierarchy for historical reasons.
+    // （訳）
+    // markはほんとうのoopではなくただのワードであることに注意してください。
+    // これがoopの継承関係にいるのは歴史的な理由によるものです。
+//}
+
+なるほど。うん、しょうがないか。歴史的な理由ならしょうがないですね。
+
+個人的にはこんな複雑なことはせずに、単純に1ワードのメンバ変数をもつようなクラスを定義すればいいのではと思います。
+C++だとコンパイラが余計なデータ領域を確保したりすることがあるので嫌なのでしょうか（vtableなど）。
+でも、これは読みづらいですよね…。
 
 === フォワーディングポインタ
 オブジェクトヘッダの使い方の実例として、コピーGCに利用されるフォワーディングポインタとしての利用方法を見てみましょう。
@@ -212,11 +258,17 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 4459: }
 //}
 
-引数にはコピー元のオブジェクトへのポインタ（@<code>{oop}）を@<code>{old}を受け取ります。
+引数にはコピー元のオブジェクトへのポインタ（@<code>{old}）を受け取ります。
 4370行目でオブジェクトのサイズを取得し、サイズ分のオブジェクトを4382行目で新たに割り当てます。
 4383行目で割り当てた領域に対するアドレスを@<code>{oop}にキャストします。
 
-そして、4395行目の@<code>{forward_to_atomic()}がフォワーディングポインタを作成するメンバ関数です。
+4383行目の@<code>{oop(p)}の部分は若干説明が必要でしょう。
+C++では関数呼び出しと同様の構文で明示的な型変換をおこなうことができます。
+キャストと明示的な型変換は複数の引数が受け取れる箇所が異なります。
+キャストの場合は引数が実質1つしか受け取れませんが、明示的な型変換は複数の引数を受け取れます。
+ただ、@<code>{oop(p)}の場合は引数を1つしか受け取っていませんので、@<code>{(oop)p}と同じことだと考えればいいでしょう。
+
+4395行目の@<code>{forward_to_atomic()}がフォワーディングポインタを作成するメンバ関数です。
 このメンバ関数は並行に動く可能性がありますので、途中で他のスレッドに割り込まれて先にコピーされてしまった場合は@<code>{NULL}を返します。
 無事、フォワーディングポインタを設定できたら、4397行目で実際にオブジェクトの内容をコピーし、4458行目でコピー先のアドレスを返します。
 
