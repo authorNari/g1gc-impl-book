@@ -2,7 +2,7 @@
 
 この章から数章をかけてHotspotVMのスレッド管理方法について見ていきます。
 『アルゴリズム編』で述べたとおり、G1GCは並列・並行GCを組み合わせたGCです。
-並列・並行GCはそれぞれスレッドを利用して実装されており、複数のスレッドをどのように管理するかが肝になります。
+並列・並行GCはそれぞれスレッドを利用して実装されており、複数のスレッドをどのように管理するかが実装の肝になります。
 
 本章ではHotspotVMのスレッド管理の中でもOSに近い土台的な部分を見ていきます。
 
@@ -20,9 +20,9 @@ HotspotVM内ではスレッドを操作する基本的な機能を@<code>{Thread
 
 //image[thread_hierarchy][Threadクラスの継承関係]
 
-@<code>{Thread}クラスは@<code>{CHeapObj}クラスを直接継承しているため、Cのヒープ領域から直接アロケーションされます。
+@<code>{Thread}クラスは@<code>{CHeapObj}クラスを継承しているため、インスタンスはCのヒープ領域から直接アロケーションされます。
 
-また@<code>{Thread}クラスは仮想関数として@<code>{run()}が定義されています。
+@<code>{Thread}クラスは仮想関数として@<code>{run()}が定義されています。
 
 //source[share/vm/runtime/thread.hpp]{
 94: class Thread: public ThreadShadow {
@@ -37,12 +37,12 @@ HotspotVM内ではスレッドを操作する基本的な機能を@<code>{Thread
 
 子クラスの@<code>{JavaThread}クラスはJavaの言語レベルで実行されるスレッドを表現しています。言語利用者がJavaのスレッドを一つ作ると、内部ではこの@<code>{JavaThread}クラスが一つ生成されています。@<code>{JavaThread}クラスはGCとそれほど関係のないクラスですので、本書では詳しく説明しません。
 
-@<code>{NamedThread}クラスはスレッドの名前付けをサポートします。@<code>{NamedThread}クラスや子クラスのインスタンスに対し、一意の名前を設定できます。
+@<code>{NamedThread}クラスはスレッドに対する名前付けをサポートします。@<code>{NamedThread}クラスやその子クラスでは、インスタンスに対して一意の名前を設定できます。
 GCスレッドとして利用するクラスは、この@<code>{NamedThread}クラスを継承して実装されます。
 
 == スレッドのライフサイクル
 
-では、実際にスレッドが生成されて、処理が開始し、終了するまでを順を追ってみていきましょう。
+では、実際にスレッドが生成され、処理の開始・終了までを順を追ってみていきましょう。
 以下がひとつのスレッドのライフサイクルです。
 
  1. @<code>{Thread}クラスのインスタンス生成
@@ -53,7 +53,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 まず、1.で@<code>{Thread}クラスのインスタンスを生成します。インスタンス生成時にスレッドを管理するためのリソースを初期化したり、スレッドを生成する前準備を行います。
 
-以降の2.,3.,4.について@<img>{os_thread_start_end_fllow}に図示します。
+2.,3.,4.については@<img>{os_thread_start_end_fllow}に図示しました。
 
 //image[os_thread_start_end_fllow][スレッド生成・処理開始・処理終了の流れ図]
 
@@ -68,6 +68,8 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 === OSThreadクラス
 
 @<code>{Thread}クラスには@<code>{OSThread}クラスのインスタンスを格納する@<code>{_osthread}メンバ変数が定義されています。@<code>{OSThread}クラスはスレッドを操作するのに必要な、各OSに依存したスレッドの情報を保持します。スレッド生成時に@<code>{OSThread}クラスのインスタンスが生成され、@<code>{_osthread}メンバ変数に格納されます。
+
+@<code>{OSThread}クラスの定義では対象のOSごとに異なる下記のようにヘッダファイルを読み込みます。
 
 //source[share/vm/runtime/osThread.hpp]{
 61: class OSThread: public CHeapObj {
@@ -87,7 +89,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 //}
 
-@<code>{OSThread}クラスの定義では対象のOSごとに異なるヘッダファイルを読み込みます。Linuxのヘッダファイルを一部見てみましょう。
+では、Linuxのヘッダファイルを一部見てみましょう。
 
 //source[os/linux/vm/osThread_linux.hpp]{
 49:   pthread_t _pthread_id;
@@ -99,15 +101,15 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 //source[share/vm/runtime/osThread.hpp]{
 44: enum ThreadState {
-45:   ALLOCATED, // アロケーション済みだが初期化はまだ
-46:   INITIALIZED, // 初期化済みだが処理開始はまだ
-47:   RUNNABLE, // 処理開始済みで起動可能
+45:   ALLOCATED,    // アロケーション済みだが初期化はまだ
+46:   INITIALIZED,  // 初期化済みだが処理開始はまだ
+47:   RUNNABLE,     // 処理開始済みで起動可能
 48:   MONITOR_WAIT, // モニターロック競合待ち
 49:   CONDVAR_WAIT, // 条件変数待ち
-50:   OBJECT_WAIT, // Object.wait()呼び出しの待ち
+50:   OBJECT_WAIT,  // Object.wait()呼び出しの待ち
 51:   BREAKPOINTED, // ブレークポイントで中断
-52:   SLEEPING, // Thread.sleep()中
-53:   ZOMBIE // 終了済みだが回収されていない
+52:   SLEEPING,     // Thread.sleep()中
+53:   ZOMBIE        // 終了済みだが回収されていない
 54: };
 //}
 
@@ -194,12 +196,11 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
  1. スレッドのセキュリティ属性。@<code>{NULL}の場合は何も指定されません。
  2. スタックサイズ。@<code>{0}の場合はメインスレッドと同じ値を使用します。
  3. スレッド上で処理する関数のアドレス。
- 4. 上記の関数に渡す引数。
+ 4. 3.に指定した関数に渡す引数。
  5. スレッドの初期状態。@<code>{CREATE_SUSPENDED}は一時停止を表します。
  6. スレッドIDを受け取る変数へのポインタ。
 
-加えて引数のスレッドの初期状態に@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定しています。
-このフラグの詳細はすぐ後の項で説明します。
+上記の他に5.（スレッドの初期状態）に対して@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグを指定していますが、このフラグの詳細はここでは説明しません。すぐ後の項で説明します。
 
 606、607行目ではスレッド生成時に取得した@<code>{thread_handle}と@<code>{thread_id}を@<code>{OSThread}インスタンスに設定します。
 
@@ -215,25 +216,27 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 === STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ
 
-ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するために@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグが指定されているようです。ソースコード中の文を簡単に以下に翻訳しました。
+ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するために@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグが指定されているようです。ソースコード（@<code>{os/windows/vm/os_windows.cpp}）内のコメントを簡単に以下に翻訳しました。
 
 //quote{
 MSDNのドキュメントとは反対に、_beginthreadex()の"stack_size"はスタックサイズを定義しません。
-その代わりに、最初の確保されたメモリを定義します。
+その代わりに、最初のコミット済みメモリサイズを定義します。
 スタックサイズは実行ファイルのPEヘッダ(*1)によって定義されます。
-もし、"stack_size"がPEヘッダのデフォルト値より大きければ、スタックサイズは最も近い1MBの倍数に切り上げられます。
-例えば、ランチャーのスタックサイズのデフォルト値が320KBだったとして、320KB以下のサイズはスタックサイズに何の影響も与えません。
-この場合は、最初の確保されたメモリサイズにのみ影響があります。
-一方、デフォルト値より大きな"stack_size"を指定した場合は、重大なメモリ使用量の増加を引き起こす可能性があります。
-なぜなら、スタック領域が数MBに切り上げられるだけでなく、その全体の領域が前もって確保されるからです。
+ランチャーのスタックサイズのデフォルト値が320KBだったとして、320KB以下のサイズはスタックサイズに何の影響も与えません。
+しかし、"stack_size"がPEヘッダのデフォルト値より大きければ、スタックサイズは最も近い1MBの倍数に切り上げられます。
+この場合は、最初のコミット済みメモリサイズにのみ影響があります。
+"stack_size"がPFヘッダのデフォルト値より大きい場合、重大なメモリ使用量の増加を引き起こす可能性があります。
+なぜなら、意図せずにスタック領域が数MBに切り上げられるだけでなく、その全体の領域が前もって確保されてしまうからです。
 
 最終的にWindows XPはCreateThread()のために"STACK_SIZE_PARAM_IS_A_RESERVATION"を追加しました。
-これは"stack_size"をスタックサイズとして扱うことができます。
-ただ、JVMはCランタイムライブラリを利用するため、CreateThread()をMSDNに従って直接呼ぶことができません。
+これは"stack_size"を「スタックサイズ」として扱うことができます。
+ただ、JVMはCランタイムライブラリを利用するため、CreateThread()をMSDNに従って直接呼ぶことができません(*2)。
+
 
 でも、いいニュースです。このフラグは_beginthredex()でもうまく動くようですよ！！
 
-*1:訳注 PEヘッダとは実行ファイルに定義される実行に必要な設定を格納する場所。
+*1:訳注 実行ファイルに定義される、実行に必要な設定を格納する場所のことをPEヘッダと呼ぶ。
+*2:訳注 そのため、_beginthreadx()を利用している。
 //}
 
 Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthredex()}の引数に指定している理由はわかりました。
