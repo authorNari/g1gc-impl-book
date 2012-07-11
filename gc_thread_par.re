@@ -11,7 +11,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
   * @<code>{AbstractGangTask} - ワーカーに実行させるタスク
   * @<code>{GangWorker} - 与えられたタスクを実行するワーカー
 
-上記の登場人物が並列にタスクを実行する一連の流れをこれから示します。
+では、上記の登場人物が並列にタスクを実行する際の一連の流れを説明しましょう。
 
 まず、@<code>{AbstractWorkGang}は1つだけモニタを持っており、モニタの待合室には@<code>{AbstractWorkGang}に所属する@<code>{GangWorker}を待たせいます（@<img>{work_gang_do_task_1}）。
 
@@ -46,11 +46,10 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 通し番号が異なる場合は新しいタスクとみなし、手持ちの紙に掲示板の情報（タスクの場所・通し番号）を書き込みます。
 その後、掲示板の実行ワーカー総数を@<code>{+1}して、モニタの外に出てタスクを実行します。
 
-次に、タスクの実行が終わるとワーカーは再度モニタに入り、タスクが終了したことを伝えます（@<img>{work_gang_do_task_4}）。
+次に、タスクの実行が終わるとワーカーは再度モニタに入り、タスクが終了したことを伝えるため、掲示板の実行完了ワーカー総数を@<code>{+1}します。（@<img>{work_gang_do_task_4}）。
 
 //image[work_gang_do_task_4][4. タスクを終えたワーカーは再度モニタに入り、掲示板の情報を書き換えた後で待合室に入る。]
 
-ワーカーはモニタに入り、掲示板の実行完了ワーカー総数を@<code>{+1}します。
 そして、待合室の全員を呼び出し（クライアントを含む）、自分は待合室に入ります。
 ワーカーのタスク実行がすべて終了すると、実行ワーカー総数は実行完了ワーカー総数と同じになります。
 
@@ -99,7 +98,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 139〜156行目までは@<code>{WorkGang}に必要な属性が定義されています。
 これは@<hd>{並列実行の流れ}で説明した「タスク情報の掲示板」のデータに相当します。
 
-@<img>{abstract_worker_gang_hierarchy}で示した@<code>{FlexibleWorkGang}クラスは実行可能なワーカーを後から柔軟に（Flexible）変更できる機能を持つクラスです。
+@<img>{abstract_worker_gang_hierarchy}で示した@<code>{FlexibleWorkGang}クラスは実行可能なワーカー数を後から柔軟に（Flexible）変更できる機能を持つクラスです。
 並列GCにはこの@<code>{FlexibleWorkGang}クラスがよく利用されます。
 
 == AbstractGangTaskクラス
@@ -108,7 +107,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 //image[abstract_gang_task_hierarchy][@<code>{AbstractGangTask}クラスの継承関係]
 
-@<code>{AbstractGangTask}は並列実行するタスクとして必要なインタフェースの仮想関数を定義しています。
+@<code>{AbstractGangTask}は並列実行されるタスクとして必要なインタフェースを定義するクラスです。
 
 //source[share/vm/utilities/workgroup.hpp]{
 64: class AbstractGangTask VALUE_OBJ_CLASS_SPEC {
@@ -121,7 +120,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 @<code>{work()}はワーカーの識別番号（連番）を受け取り、タスクを実行する関数です。
 
 タスクの詳細な処理は、@<code>{G1ParTask}のようなそれぞれの子クラスで@<code>{work()}として定義します。
-クライアントは子クラスのインスタンスを@<code>{AbstractWorkGang}に渡して、並列実行してもらうわけです。
+クライアントは@<code>{AbstractGangTask}の子クラスのインスタンスを@<code>{AbstractWorkGang}に渡して、並列実行してもらうわけです。
 
 == GangWorkerクラス
 @<code>{GangWorker}クラスはタスクを実際に実行するクラスで、@<code>{Thread}クラスを祖先に持ちます。
@@ -141,9 +140,9 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 == 並列GCの実行例
 では、実際のコードを読みながら@<hd>{並列実行の流れ}の内容を振り返りましょう。
 
-@<list>{par_mark_sample_code}にクライアントとなるメインスレッドが実行する並列GCの実行例を示しました。
+@<list>{par_mark_sample_code}にクライアントとなるメインスレッドが実行する並列GCの実行サンプルを示しました。
 
-//listnum[par_mark_sample_code][並列GC実行例のサンプルコード]{
+//listnum[par_mark_sample_code][並列GC実行のサンプルコード]{
 /* 1. ワーカーの準備 */
 workers = new FlexibleWorkGang("Parallel GC Threads", 8, true, false);
 workers->initialize_workers();
@@ -214,7 +213,7 @@ workers->run_task(&marking_task);
 93行目で@<code>{allocate_worker()}を使って@<code>{GangWorker}を生成します。
 96行目でワーカースレッドを生成し、101行目でワーカースレッドの処理を開始します。
 
-@<code>{allocate_worker()}のソースコードは以下の通りです。
+93行目の@<code>{allocate_worker()}のソースコードは以下の通りです。
 
 //source[share/vm/utilities/workgroup.cpp]{
 64: GangWorker* WorkGang::allocate_worker(int which) {
@@ -228,6 +227,7 @@ workers->run_task(&marking_task);
 さて、@<code>{initialize_workers()}内の@<code>{os::start_thread()}によって、スレッドの処理は実行しています。
 @<code>{GangWorker}は@<code>{Thread}を継承したクラスです。
 スレッドは処理を開始すると子クラスの@<code>{run()}メソッドを呼び出すのでしたね。
+この場合は@<code>{GangWorker}クラスの@<code>{run()}が呼び出されます。
 
 //source[share/vm/utilities/workgroup.cpp]{
 222: void GangWorker::run() {
@@ -265,8 +265,8 @@ workers->run_task(&marking_task);
 
 まず、243行目で自分の所属する@<code>{AbstractWorkGang}のモニタを取得します。
 249行目でロックを掛けてモニタに入ります。
-その後、268行目のループ内のはじめにタスクがあるかチェックします。
-スレッド起動時にはタスクがないことが多いので、大抵はタスクがなく、284行目で@<code>{wait()}を呼び出します。
+その後、268行目のループのはじめの方でタスクがあるかチェックします。
+スレッド起動時にはタスクがないことが多いので、このタイミングではたいていが284行目の@<code>{wait()}を呼び出します。
 
 === 2. タスクの生成
 ワーカーの準備ができたら、次に実行させるタスクを生成します。
@@ -292,7 +292,7 @@ workers->run_task(&marking_task);
 //}
 
 1155〜1157行目に定義されている@<code>{CMConcurrentMarkingTask}のコンストラクタでは、@<code>{work()}を実行するのに必要な変数を引数として受け取るようにしています。
-@<code>{work()}の引数は決められているので、それぞれのタスク実行に必要な情報はメンバ変数として持たなければなりません。
+@<code>{work()}の引数は決められているので、それぞれのタスク実行に必要な情報はタスクインスタンスのメンバ変数として保持しなければなりません。
 
 1095〜1153行目が@<code>{CMConcurrentMarkingTask}が実行するタスクの内容です。
 生成されたそれぞれの@<code>{GangWorker}はこの@<code>{work()}を呼び出すことになります。
@@ -336,7 +336,7 @@ workers->run_task(&marking_task);
 条件に合わない場合、152行目でクライアントは@<code>{wait()}し続けます。
 この部分は@<img>{work_gang_do_task_5}と対応しています。
 
-それぞれのワーカーは@<code>{GangWorker}の@<code>{loop()}で@<code>{wait()}を呼び出し、待っていました。
+それぞれのワーカーは@<code>{GangWorker}の@<code>{loop()}で@<code>{wait()}を呼び出し、実行可能なタスクが与えられることを待っていました。
 もう少し@<code>{loop()}を詳細に見ていきましょう。
 
 //source[share/vm/utilities/workgroup.cpp:loop()前半]{
@@ -368,20 +368,23 @@ workers->run_task(&marking_task);
 308:     data.task()->work(part);
 //}
 
-242行目の@<code>{previous_sequence_number}は名前の通り、以前のタスクの通し番号を記録してローカル変数です。
+242行目の@<code>{previous_sequence_number}は名前の通り、以前のタスクの通し番号を記録するローカル変数です。
 
 244行目からの@<code>{for}ループが一度回るたびにワーカーは1つのタスク実行をこなします。
 245行目の@<code>{WorkData}は@<code>{WorkerGang}にあるタスクの情報（掲示板の情報）を記録するローカル変数です。
-246行目の@<code>{park}はワーカーの順番を記録するローカル変数です。
-これらはタスク実行ループが一回終了するたびに破棄されます。
+また、246行目の@<code>{park}はワーカーの順番を記録するローカル変数です。
+これらはタスク実行ループのスコープに定義されたローカル変数ですので、タスク実行ループが一回終了するたびに破棄されます。
 
 268行目からの@<code>{for}ループは@<code>{WorkerGang}からタスクを取得するループです。
-通常は284行目で待っている状態で止まっていて、@<code>{notify_all()}で動き出します。
+通常は284行目で待っている状態で止まっていて、@<code>{notify_all()}によって動き出します。
 動き出すと、285行目の@<code>{internal_worker_poll()}でローカル変数にタスクの情報をコピーします。
 情報を取得したら、276,277行目の条件分岐で実行すべきタスクがあるかどうかチェックします。
-チェックに合格したら、278行目で自分が起動しことを@<code>{GangWorker}に書きこみ、279行目で@<code>{notify_all()}して、ワーカーの順番を@<code>{part}に格納してからループを脱出します。
+チェックに合格したら、278行目で自分が起動したことを@<code>{GangWorker}に書きこみ、279行目で@<code>{notify_all()}して、ワーカーの順番を@<code>{part}に格納してからループを脱出します。
 ループを抜けるときに一緒にモニタをアンロックしていることに注意してください。
+
 その後、308行目でタスクの@<code>{work()}を@<code>{part}を引数として呼び出しています。
+ここで実際にタスクを実行します。
+
 ここまで部分は@<img>{work_gang_do_task_3}と対応しています。
 
 //source[share/vm/utilities/workgroup.cpp:loop()後半]{
