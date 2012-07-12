@@ -22,12 +22,11 @@
 3. が終了した段階で、回収集合内にある生存オブジェクトはすべて退避済みとなります。
 
 また退避は必ずセーフポイントで実行されます。
-そのため、退避中はミューテータは停止した状態になっています。
+そのため、すべてのミューテータは退避中に停止した状態になっています。
 
 === 退避の実行タイミング
 退避は『アルゴリズム編 5.8』で説明したとおり、新世代リージョン数が上限に達したタイミングで実行します。
-VMヒープからオブジェクトをアロケーションする際には新世代リージョンにオブジェクトをわりあてていきます。
-アロケーションの際に新世代リージョン数が上限に達したことを検知し、上限に達したら退避を実行します。
+オブジェクトのアロケーションでは新世代リージョンに対してオブジェクトをわりあてていき、新世代リージョン数が上限に達した際に退避を実行します。
 
 では、実際のソースコードを見てみましょう。
 @<hd>{alloc|オブジェクトのアロケーション|G1GCのVMヒープへメモリ割り当て}で少し紹介した@<code>{attempt_allocation_slow()}メンバ関数の中で退避を呼び出しています。
@@ -51,9 +50,9 @@ VMヒープからオブジェクトをアロケーションする際には新世
 937:       result = do_collection_pause(word_size, gc_count_before, &succeeded);
 //}
 
-906行目から933行目に掛けて、新しい空きリージョンを確保しようとします。
-成功した場合は912行目で@<code>{return}しますが、失敗した場合は937行目で@<code>{do_collection_pause()}を呼びます。
+906行目から933行目にかけて、新しい空きリージョンを確保しようとします。
 新世代リージョン数が上限に達したら新しい空きリージョンは確保できずに失敗します。
+失敗した場合は937行目で@<code>{do_collection_pause()}を呼びます。
 
 @<code>{do_collection_pause()}は以下のようにVMオペレーションを実行します。
 
@@ -91,8 +90,8 @@ VMヒープからオブジェクトをアロケーションする際には新世
 113: }
 //}
 
-105行目の@<code>{do_collection_pause_at_safepoint()}で退避は実行されます
-成功すれば退避で空いた領域にメモリを割り当てて、@<code>{_result}メンバ変数にポインタを格納してVMオペレーションを終了します。
+105行目の@<code>{do_collection_pause_at_safepoint()}で退避は実行されます。
+成功すれば退避で空いた領域にメモリを割り当て、VMオペレーションを終了します。
 
 === do_collection_pause_at_safepoint()
 @<code>{do_collection_pause_at_safepoint()}の説明に必要な部分を抜き出すと次のようになります。
@@ -116,7 +115,7 @@ VMヒープからオブジェクトをアロケーションする際には新世
 3336行目の@<code>{choose_collection_set()}は回収集合を選択するメンバ関数です。
 この関数では、引数に受け取るGC停止時間上限を超えないような回収集合を選択します。
 
-3362行目の@<code>{evacuate_collection_set()}で選択した回収集合の生存オブジェクトを退避していきます。
+3362行目の@<code>{evacuate_collection_set()}は選択した回収集合の生存オブジェクトを退避するメンバ関数です。
 
 === 退避用記憶集合維持スレッド
 『アルゴリズム編 3.4』で紹介した退避用記憶集合維持スレッドは@<code>{ConcurrentG1RefineThread}というクラスに実装されています。
@@ -144,7 +143,7 @@ VMヒープからオブジェクトをアロケーションする際には新世
 //}
 
 77行目の@<code>{thread_num()}で生成する@<code>{ConcurrentG1RefineThread}インスタンスの数が決まります。
-この@<code>{thread_num()}の値は@<code>{G1ConcRefinementThreads}という言語利用者が起動オプションに指定できる値でも変更可能です。
+この@<code>{thread_num()}の値は、言語利用者が起動オプションに指定できる@<code>{G1ConcRefinementThreads}という値でも変更可能です。
 
 @<code>{ConcurrentG1RefineThread}クラスはインスタンスを作った時点でスレッドの生成・起動をおこないます。
 86行目でインスタンスを生成すると同時に、退避用記憶集合維持スレッドは動き出します。
@@ -260,8 +259,8 @@ G1GCは必ず世代別G1GC方式で動作しますので、@<code>{in_young_gc_m
 
 @<code>{evacuate_collection_set()}では@<hd>{mark|ステップ1―初期マークフェーズ|G1GCのルートスキャン}で登場した@<code>{G1ParTask}を生成し、（可能な場合は並列で）実行します。
 
-@<code>{G1ParTask}はすでに説明した通り、@<code>{process_strong_roots()}を使ってすべてのルートを走査し、G1GCの場合は@<code>{G1ParScanAndMarkExtRootClosure}クラスの@<code>{do_oop()}を適用します。
-この@<code>{do_oop()}にオブジェクトを退避する処理が実装されています。
+@<code>{G1ParTask}はすでに説明した通り、@<code>{process_strong_roots()}を使ってすべてのルートをスキャンし、G1GCの場合は@<code>{G1ParScanAndMarkExtRootClosure}クラスの@<code>{do_oop()}を適用します。
+この@<code>{do_oop()}にはオブジェクトを退避する処理が実装されています。
 
 === オブジェクト退避
 @<code>{do_oop()}は最終的に@<code>{G1ParCopyHelper}クラスの@<code>{copy_to_survivor_space()}を呼び出し、オブジェクトを空きリージョンに退避します。
@@ -289,7 +288,7 @@ G1GCは必ず世代別G1GC方式で動作しますので、@<code>{in_young_gc_m
 
 引数には@<code>{from}、@<code>{to}、そしてコピーするデータのワード数を引数に取ります。
 115行目の@<code>{assert_params_aligned()}は@<code>{from}と@<code>{to}がアラインメントされた値かをチェックします。
-116行目は@<code>{from}から@<code>{to}へ、コピーする際にメモリ領域が重ならないことをチェックします。
+116行目では@<code>{from}から@<code>{to}へ、コピーする際にメモリ領域が重ならないことをチェックしています。
 117行目の@<code>{pd_aligned_disjoint_words()}は各OSごとに定義されている静的メンバ関数です。
 
 ここではOSがLinuxでCPUがx86のものに対する@<code>{pd_aligned_disjoint_words()}を見てみます。
@@ -369,7 +368,7 @@ AMD64以外はインラインアセンブラを使ってコピーを自前で実
 103行目は@<code>{rep}を使ったストリングス命令@<code>{smovl}の実行です。
 @<code>{count}の分だけ@<code>{smovl}を繰り返し、@<code>{from}から@<code>{to}へデータをコピーします。
 
-96〜102行目はジャンプを使ったループでコピーする処理です。
+96〜102行目ではジャンプによるループでコピーをおこなっています。
 @<code>{count}が32以下であればこっちを使います。
 96行目は@<code>{from}と@<code>{to}をオフセットを求め、@<code>{to}のレジスタに格納します。
 97行目で@<code>{from}の1ワード分のデータを@<code>{temp}のレジスタに格納。
