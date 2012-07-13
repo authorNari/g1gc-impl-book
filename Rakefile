@@ -62,7 +62,7 @@ task :ebook do
   sh("mv #{bn}.epub ebook/g1gc-impl-#{d}.epub")
   sh("mv #{bn}.mobi ebook/g1gc-impl-#{d}.mobi")
   sh("rm -rf #{bn}")
-  sh("review-pdfmaker config.yml")
+  sh("#{bin('review-pdfmaker')} config.yml")
   sh("mv #{bn}.pdf ebook/g1gc-impl-#{d}.pdf")
   sh("rm -rf #{bn}")
 end
