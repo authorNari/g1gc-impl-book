@@ -71,3 +71,7 @@ task :clean do
   sh("rm *.html")
   sh("rm -r pkg")
 end
+
+task :pdf do
+  sh("rm -rf book; rm -f book.pdf; review-pdfmaker config.yml; open book.pdf")
+end

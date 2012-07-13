@@ -389,6 +389,8 @@ void make_handles(oop obj1, oop obj2) {
 
 ただし、HotspotVMは多くの処理をJava言語で実装するというポリシーがありますので、上記の機能を使う機会はあまりありません。
 
+//pagebreak
+
 ===[column]
 
-//indepimage[coffee_with_gc]
+//indepimage[coffee_with_gc][][scale=5]
