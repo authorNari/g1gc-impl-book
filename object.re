@@ -34,7 +34,7 @@
 @<code>{_klass}変数はその名前の通りオブジェクトのクラスへのポインタを格納します。
 67行目の@<code>{_compressed_klass}はGCとは関係ないため本書では特に触れません。
 
-HotspotVMでは、@<code>{oopDesc}クラスのインスタンスへのポインタ（@<code>{oopDesc*}）などを@<code>{typedef}で別名定義しています。
+HotspotVMでは、@<code>{oopDesc}インスタンスのポインタ（@<code>{oopDesc*}）などを@<code>{typedef}で別名定義しています。
 
 //source[share/vm/oops/oopsHierarchy.hpp]{
 42: typedef class oopDesc*                            oop;
@@ -55,7 +55,6 @@ HotspotVMでは、@<code>{oopDesc}クラスのインスタンスへのポイン�
 すべて@<code>{Desc}を取り除いた名前に別名定義されています。
 @<code>{oopDesc}の@<code>{Desc}は「Describe（表現）」の略です。
 つまり、@<code>{oopDesc}とは@<code>{oop}という実体（オブジェクト）をクラスとして「表現」しているものなのです。
-@<code>{oop}などの別名定義は今後、頻繁に登場するため意味も含めてしっかりと抑えておいてください。
 本章では@<code>{oopDesc}等のインスタンスを別名定義のルールに従って@<code>{oop}のように呼ぶことにします。
 
 == klassOopDescクラス
@@ -74,19 +73,19 @@ HotspotVMでは、@<code>{oopDesc}クラスのインスタンスへのポイン�
 == Klassクラス
 
 @<code>{Klass}クラスは名前の通り、型情報を保持しています。
-@<code>{Klass}クラスのインスタンスは@<code>{klassOop}の一部として生成されます。
+@<code>{Klass}のインスタンスは@<code>{klassOop}の一部として生成されます。
 
-@<code>{Klass}クラスは様々な型情報の抽象的な基底クラスです。
-@<code>{Klass}クラスの継承関係を@<img>{klass_hierarchy}に示します。
+@<code>{Klass}は様々な型情報の抽象的な基底クラスです。
+@<code>{Klass}の継承関係を@<img>{klass_hierarchy}に示します。
 
 //image[klass_hierarchy][Klassクラスの継承関係]
 
-@<code>{Klass}クラスの子クラスには、@<code>{oopDesc}の子クラスと対応するクラスが存在します。
+@<code>{Klass}の子クラスには、@<code>{oopDesc}の子クラスと対応するクラスが存在します。
 そのような@<code>{XXDesc}のインスタンスには、@<code>{XXDesc}に対応した@<code>{XXKlass}を保持する@<code>{klassOop}が格納されます。
 
 前の@<hd>{klassOopDescクラス}の項で@<code>{klassOop}はただの箱だといいました。
 @<code>{klassOop}はオブジェクトとして@<code>{Klass}やその子クラスを統一的にあつかうためのインタフェースだといえるでしょう。
-つまり、外側は@<code>{klassOop}だとしても内部には@<code>{instanceKlass}や@<code>{symbolKlass}等がなどが入っているということです（@<img>{klassOop_box}）。
+つまり、外側は@<code>{klassOop}だとしても内部には@<code>{instanceKlass}や@<code>{symbolKlass}などが入っているということです（@<img>{klassOop_box}）。
 
 //image[klassOop_box][klassOopはKlassの箱]
 
@@ -115,7 +114,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 そして、その@<code>{klassOop}の中には@<code>{instanceKlass}のインスタンスが格納されます。
 @<img>{oop_by_string}中央の@<code>{klassOop}は、@<list>{new_string}の2行目で示したJava上の@<code>{String}クラスと対応しています。
 
-次に、図中央の@<code>{klassOop}（＝Java上のStringクラス）は同じく@<code>{klassOop}を持ちます。
+次に、図中央の@<code>{klassOop}（＝Java上のStringクラス）は内部にさらに別の@<code>{klassOop}を持ちます。
 この@<code>{klassOop}の中には@<code>{instanceKlassKlass}のインスタンスが格納されています。
 @<img>{oop_by_string}右端の@<code>{klassOop}が上記を表しており、@<list>{new_string}の3行目で示したJava上の@<code>{Class}クラスと対応しています。
 
@@ -126,7 +125,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 
 == oopDescクラスに仮想関数を定義してはいけない
 
-@<code>{oopDesc}クラスにはC++の仮想関数（virtualfunction）@<fn>{virtual_function}を定義してはいけない決まりになっています。
+@<code>{oopDesc}クラスにはC++の仮想関数（virtual function）@<fn>{virtual_function}を定義してはいけない決まりになっています。
 
 クラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル@<fn>{vtable}へのポインタを勝手に付けてしまいます。
 もし@<code>{oopDesc}に仮想関数を定義するとすべてのオブジェクトに対して1ワードが確保されてしまいます。
@@ -151,7 +150,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 47:   bool oop_is_array() const { return true; }
 //}
 
-そして、@<code>{oopDesc}クラスでは@<code>{Klass}クラスの仮想関数を呼び出します。
+そして、@<code>{oopDesc}クラスでは@<code>{Klass}の仮想関数を呼び出します。
 
 //source[share/vm/oops/oop.inline.hpp]{
 139: inline Klass* oopDesc::blueprint() const {
@@ -164,7 +163,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 146行目では@<code>{Klass}の仮想関数で定義されたメンバ関数を呼び出しています。
 @<code>{oop}の@<code>{is_array()}を呼び出しても、対応した@<code>{Klass}の@<code>{oop_is_array()}が応答し、@<code>{false}が戻りますが、@<code>{arrayOop}の@<code>{is_array()}を呼び出すと、対応した@<code>{arrayKlass}の@<code>{oop_is_array()}が応答し、@<code>{true}が戻ります。
 
-@<code>{Klass}クラスに仮想関数を定義するため、@<code>{klassOop}には仮想関数テーブルへのポインタが付いてしまいますが、Java上のクラスは全体量が少ないため、それほどメモリを消費しません。
+@<code>{Klass}に仮想関数を定義するため、@<code>{klassOop}には仮想関数テーブルへのポインタが付いてしまいますが、Java上のクラスはオブジェクトよりも全体量が少ないため問題になりません。
 
 //footnote[virtual_function][仮想関数：子クラスで再定義可能な関数のこと。C++上の文法でメンバ関数に virtual を付けると仮想関数となる]
 //footnote[vtable][仮想関数テーブル：実行時に呼び出すメンバ関数の情報を格納している]
@@ -217,7 +216,7 @@ header->is_marked();  // マーク状態を調べる
 利用例として221〜223行目に@<code>{is_marked()}というマーク済みかどうかを返すメンバ関数をみてみましょう。
 222行目では@<code>{value()}で得た1ワードデータをマスクし、マークビットが立っているかどうかを判断して結果を返しています。
 
-さて、104行目で@<code>{oopDesc}クラスを一応継承していますが、これはまったく利用しません。
+さて、104行目で@<code>{markOopDesc}は@<code>{oopDesc}クラスを一応継承していますが、これはまったく利用しません。
 @<code>{oopDesc}からいくらかのメンバ変数も継承しますが、@<code>{markOopDesc}はインスタンスを持たないのでこれらも使うことができません。
 じゃあ、なぜこんな余計なクラスを継承しているのか、という話ですが、きちんとコメントが書いてありました。
 
@@ -269,7 +268,7 @@ C++では関数呼び出しと同様の構文で明示的な型変換をおこ�
 ただ、@<code>{oop(p)}の場合は引数を1つしか受け取っていませんので、@<code>{(oop)p}と同じことだと考えればいいでしょう。
 
 4395行目の@<code>{forward_to_atomic()}がフォワーディングポインタを作成するメンバ関数です。
-このメンバ関数は並行に動く可能性がありますので、途中で他のスレッドに割り込まれて先にコピーされてしまった場合は@<code>{NULL}を返します。
+このメンバ関数は並列に動く可能性があり、途中で他のスレッドに割り込まれて先にコピーされてしまった場合は@<code>{NULL}を返します。
 無事、フォワーディングポインタを設定できたら、4397行目で実際にオブジェクトの内容をコピーし、4458行目でコピー先のアドレスを返します。
 
 では、@<code>{forward_to_atomic()}メンバ関数の中身を見てみましょう。
@@ -325,10 +324,10 @@ C++では関数呼び出しと同様の構文で明示的な型変換をおこ�
        }
 //}
 
-@<code>{set_marked()}は下位2ビットを@<code>{1}にする、マークビットを立てるメンバ関数です。
-オブジェクトへのポインタは下位2ビットが必ず@<code>{0}になるようにアラインメントされることを利用したハックですね。
+@<code>{set_marked()}は下位2ビットを@<code>{1}にする（マークビットを立てる）メンバ関数です。
+オブジェクトアドレスの下位2ビットは必ず@<code>{0}になるようにアラインメントされることを利用したハックですね。
 
-上記のマークによって、オブジェクトがすでにコピーされているか判断することが出来ます。
+上記のマークによって、そのオブジェクトがすでにコピーされているか判断することが出来ます。
 
 //source[share/vm/oops/oop.inline.hpp]{
 641: inline bool oopDesc::is_forwarded() const {
