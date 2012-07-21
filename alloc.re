@@ -39,7 +39,7 @@ G1GCヒープにはリージョンが確保されました。
 それぞれのVMヒープの初期化は@<code>{CollectedHeap}クラスを継承した子クラスの@<code>{initialize()}に記述されます。
 G1GCの場合は、@<code>{G1CollectedHeap}の@<code>{initialize()}です。
 VMヒープの予約はこの@<code>{initialize()}に記述されています。
-VMヒープの予約処理部分だけを抜き出したものを以下に示します。
+VMヒープの予約処理部分だけを抜き出したものを次に示します。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
 1794: jint G1CollectedHeap::initialize() {
@@ -269,7 +269,7 @@ Linuxではメモリ領域の予約・確保を@<code>{mmap()}で実装してい
 
 @<code>{os::reserve_memory()}は内部で@<code>{os::anon_mmap()}を呼び出すだけです。@<code>{os::anon_mmap()}は@<code>{MAP_ANONYMOUS}を使ってメモリ領域を確保します。Linux版ではメモリ領域を予約するのではなく、実際には確保するのですね。
 
-また、2751行目で@<code>{mmap()}に渡される@<code>{flag}ローカル変数に設定している@<code>{MAP_NORESERVE}には「スワップ空間の予約を行わない」という意味があります。@<code>{mmap()}してアドレスが確保された場合、そのメモリ領域に確実に割り当てられる保証を得るために、スワップ空間をサイズ分一気に予約してしまうOSがあります。@<code>{MAP_NORESERVE}にはそれを防ぐ効果があります。@<code>{os::reserve_memory()}の段階ではVMヒープ用のメモリ領域を予約するだけで、実際にオブジェクトをアロケーションするなどのアクセスを行いません。そのため、スワップ空間を予約するのは無駄だということです。HP-UX@<fn>{hp-ux}のようにスワップ空間を予約するOSには効果のある工夫です。
+また、2751行目で@<code>{mmap()}に渡される@<code>{flag}ローカル変数に設定している@<code>{MAP_NORESERVE}には「スワップ空間の予約をおこなわない」という意味があります。@<code>{mmap()}してアドレスが確保された場合、そのメモリ領域に確実に割り当てられる保証を得るために、スワップ空間をサイズ分一気に予約してしまうOSがあります。@<code>{MAP_NORESERVE}にはそれを防ぐ効果があります。@<code>{os::reserve_memory()}の段階ではVMヒープ用のメモリ領域を予約するだけで、実際にオブジェクトをアロケーションするなどのアクセスを行いません。そのため、スワップ空間を予約するのは無駄だということです。HP-UX@<fn>{hp-ux}のようにスワップ空間を予約するOSには効果のある工夫です。
 
 メモリ領域の確保にあたる部分である@<code>{os::commit_memory()}メンバ関数では、逆に確保したいアドレス分だけ@<code>{MAP_NORESERVE}を付けずに@<code>{mmap()}します。似たような処理のため、コードの紹介はしません。
 

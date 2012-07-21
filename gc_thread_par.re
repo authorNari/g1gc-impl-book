@@ -19,7 +19,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 @<code>{AbstractWorkGang}は1つだけモニタを持っており、モニタの待合室には@<code>{AbstractWorkGang}に所属する@<code>{GangWorker}を待たせておきます。
 モニタが排他制御する共有リソースはタスク情報の掲示板です。
-掲示板には以下の情報が書きこまれます。
+掲示板には次の情報が書きこまれます。
 
  * タスクの場所
  * タスクの通し番号
@@ -213,7 +213,7 @@ workers->run_task(&marking_task);
 93行目で@<code>{allocate_worker()}を使って@<code>{GangWorker}を生成します。
 96行目でワーカースレッドを生成し、101行目でワーカースレッドの処理を開始します。
 
-93行目の@<code>{allocate_worker()}のソースコードは以下の通りです。
+93行目の@<code>{allocate_worker()}のソースコードは次の通りです。
 
 //source[share/vm/utilities/workgroup.cpp]{
 64: GangWorker* WorkGang::allocate_worker(int which) {

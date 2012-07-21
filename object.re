@@ -173,7 +173,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 @<hd>{oopDescクラス}で少し取り上げたオブジェクトのヘッダについてもう少し説明しておきましょう。
 オブジェクトのヘッダは@<code>{markOopDesc}クラスで表現されます。
 
-ヘッダ内の主な情報として以下のものが詰め込まれます。
+ヘッダ内の主な情報として次のものが詰め込まれます。
 
  * オブジェクトのハッシュ値
  * 年齢（世代別GCに利用）
@@ -184,7 +184,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 著者はC++にあまり馴染みがないので「こんな書き方もできるのか…」と驚かされました。
 
 @<code>{markOopDesc}は1ワードのデータだけをヘッダとして利用するクラスです。
-@<code>{markOopDesc}の利用イメージを以下に示します。
+@<code>{markOopDesc}の利用イメージを次に示します。
 
 //listnum[mark_oop_desc_01][@<code>{markOopDesc}の利用イメージ]{
 markOopDesc* header;

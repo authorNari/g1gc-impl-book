@@ -82,7 +82,7 @@
 51行目の@<code>{_in_progress}は並行マーキングが実際に実行中であるかを示すフラグです。
 
 === 並行マーキングの実行開始
-並行マーキングスレッドは以下のように、起動してすぐに@<code>{sleepBeforeNextCycle()}を呼び出します。
+並行マーキングスレッドは次のように、起動してすぐに@<code>{sleepBeforeNextCycle()}を呼び出します。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
 93: void ConcurrentMarkThread::run() {
@@ -241,7 +241,7 @@ HotspotVMにはルートスキャンをおこなう@<code>{process_strong_roots(
 224:                             OopsInGenClosure* perm_blk);
 //}
 
-この関数の説明すべき役割は以下の2つです。
+この関数の説明すべき役割は次の2つです。
 
  1. ルートを引数にして、222行目の@<code>{roots}の@<code>{do_oop()}を呼び出す
  2. 複数のスレッドで実行される場合はタスクを分割する
@@ -553,7 +553,7 @@ G1GCではバッファを一気に処理する箇所を計測して、オブジ�
 タスクスティーリングを使う場合、スレッドBは自分のタスクが終わったただ待っているのではなく、スレッドAのタスクを盗んで意欲的にタスクをこなします。
 
 HotspotVMではタスクスティーリングを簡単に利用できるユーティリティライブラリを持っており、主に並列マーキングにタスクスティーリングが活用されています。
-なかなか面白いアルゴリズムですので、もし興味がある方は以下の記事や発表（手前味噌ではありますが）を読んでみてください。
+なかなか面白いアルゴリズムですので、もし興味がある方は次の記事や発表（手前味噌ではありますが）を読んでみてください。
 
  * @<href>{http://www.nminoru.jp/~nminoru/programming/arora_dequeue.html, Arora's Task Stealing Deque}
  * @<href>{http://www.slideshare.net/authorNari/crubygc, CRubyGCの並列世界}

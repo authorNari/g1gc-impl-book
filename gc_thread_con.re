@@ -11,7 +11,7 @@
 並列GCはミューテータとは別スレッドで動くGCのことを指していますので、もちろん@<code>{Thread}クラスを祖先に持っています。
 
 @<code>{CuncurrentGCThread}に定義されている@<code>{create_and_start()}はスレッドの生成・起動を一度におこなうメンバ関数です。
-@<code>{CuncurrentGCThread}を継承するすべての子クラスは、以下のようにコンストラクタで@<code>{create_and_start()}を呼び出すため、インスタンスを作ったタイミングでGCスレッドが起動します。
+@<code>{CuncurrentGCThread}を継承するすべての子クラスは、次のようにコンストラクタで@<code>{create_and_start()}を呼び出すため、インスタンスを作ったタイミングでGCスレッドが起動します。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
 41: ConcurrentMarkThread::ConcurrentMarkThread(ConcurrentMark* cm) :
@@ -72,7 +72,7 @@
 @<code>{suspend_all()}を呼び出したあと、集合内のスレッドがすぐに停止するわけではありません。
 それぞれのスレッドはそれぞれに都合のよいタイミングで停止します。
 
-@<code>{SuspendableThreadSet}には集合内の各スレッドが停止するための以下のメンバ関数が定義されています。
+@<code>{SuspendableThreadSet}には集合内の各スレッドが停止するための次のメンバ関数が定義されています。
 
  * @<code>{should_yield()} - 集合が全停止を要求されているか？
  * @<code>{yield()} - 全停止要求中の場合は自スレッドを停止

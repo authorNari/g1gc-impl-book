@@ -54,7 +54,7 @@
 新世代リージョン数が上限に達したら新しい空きリージョンは確保できずに失敗します。
 失敗した場合は937行目で@<code>{do_collection_pause()}を呼びます。
 
-@<code>{do_collection_pause()}は以下のようにVMオペレーションを実行します。
+@<code>{do_collection_pause()}は次のようにVMオペレーションを実行します。
 
 //source[share/vm/gc_implementation/g1/g1CollectedHeap.cpp]{
 3025: HeapWord* G1CollectedHeap::do_collection_pause(size_t word_size,
@@ -381,7 +381,7 @@ AMD64以外はインラインアセンブラを使ってコピーを自前で実
 
 と、こんな感じです。
 はたしてこれは@<code>{memcpy()}よりも速いのでしょうか。
-卜部さんのかかれた以下の記事では（これは@<code>{memset64}についてですが）興味深い実験結果と考察が書かれています。
+卜部さんのかかれた次の記事では（これは@<code>{memset64}についてですが）興味深い実験結果と考察が書かれています。
 ぜひ読んでみてください。
 
  * @<href>{http://shyouhei.tumblr.com/post/2988488168/memset64-char-word, 卜部昌平のあまりreblogしないtumblr - 最速の memset64 を求めて}
@@ -389,7 +389,7 @@ AMD64以外はインラインアセンブラを使ってコピーを自前で実
 @<code>{memset64}の用途では上記の結果になりますが、@<code>{memcpy()}の場合はどうなんでしょうね。
 いろいろと変わってきそうです。
 
-インラインアセンブラの読み方に関しては以下の記事を参考にしました。
+インラインアセンブラの読み方に関しては次の記事を参考にしました。
 
  * @<href>{http://d.hatena.ne.jp/wocota/20090628/1246188338, GCCのインラインアセンブラの書き方 for x86 - OSのようなもの}
 

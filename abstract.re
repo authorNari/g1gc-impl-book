@@ -47,7 +47,7 @@ VMは基本的に上記のインタフェースを利用して実装されます
 主に@<code>{CollectedHeap}クラスに利用されます。
 アルゴリズムによってGCのクラスはかなり変化しますので、ここでは「各GCクラス」と表現しています。
 
-@<img>{vm_heap_internal}のように、VMからオブジェクト割り当て要求が行われた場合は、まず@<code>{CollectedHeap}クラスが要求を受け、@<code>{CollectorPolicy}クラスの方針にしたがって、内部のメモリ空間にあるオブジェクトを割り当てます。
+@<img>{vm_heap_internal}のように、VMからオブジェクト割り当て要求がおこなわれた場合は、まず@<code>{CollectedHeap}クラスが要求を受け、@<code>{CollectorPolicy}クラスの方針にしたがって、内部のメモリ空間にあるオブジェクトを割り当てます。
 もし、メモリ空間に空きがなければ適切な各GCクラスを使ってGCを実行します。
 
 == CollectedHeapクラス
