@@ -120,4 +120,4 @@ VMヒープのゴミ収集という達成するという目的だけは一致し
 実際、G1GCというかなり特殊なアルゴリズムがGCクラスとして開発され、全体の設計が崩れることなく導入されています。
 
 本書ではG1GCで利用されるGCクラス群だけを説明していきます。
-他のGCクラス群に興味がある場合は、@<table>{java_options_vm_heap}と@<table>{java_options_policy}内の対応する@<code>{CollectedHeap}・@<code>{CollectorPolicy}を手がかりにしてソースコードを追ってみましょう。
+ほかのGCクラス群に興味がある場合は、@<table>{java_options_vm_heap}と@<table>{java_options_policy}内の対応する@<code>{CollectedHeap}・@<code>{CollectorPolicy}を手がかりにしてソースコードを追ってみましょう。

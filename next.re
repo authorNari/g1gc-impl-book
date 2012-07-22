@@ -2,7 +2,7 @@
 
 本書を読んだ後、さらに深くGCを勉強したい、また、HotspotVMの中身も勉強したい、という人へ向けて、いくらか私が読んだ本や論文、参考にした記事を紹介したいと思います。
 
-まず、HotspotVMの他のGCのアルゴリズムも学んでみたいぞ！　という方には思いっきりそのままの論文である以下をオススメします。いわゆるCMSと呼ばれているGCですね。
+まず、HotspotVMのほかのGCのアルゴリズムも学んでみたいぞ！　という方には思いっきりそのままの論文である以下をオススメします。いわゆるCMSと呼ばれているGCですね。
 
  * Tony Pnntezis, David Detlefs: A Generational Mostly-concurrent Garbage Collector. ISMM 2000.
 

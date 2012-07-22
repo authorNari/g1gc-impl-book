@@ -92,7 +92,7 @@
 105:     sleepBeforeNextCycle();
 //}
 
-@<code>{sleepBeforeNextCycle()}は名前の通り次回のサイクルの前まで待ち状態にするメンバ関数です。
+@<code>{sleepBeforeNextCycle()}は名前のとおり次回のサイクルの前まで待ち状態にするメンバ関数です。
 @<code>{sleepBeforeNextCycle()}の詳細を見てみましょう。
 
 //source[share/vm/gc_implementation/g1/concurrentMarkThread.cpp]{
@@ -223,7 +223,7 @@ HotspotVMでGCのルートとなるものを大まかにリストアップしま
  * 各スレッド固有の情報（スタックフレームなど）
  * 組み込みクラス
  * JNIのハンドラ
- * パーマネント領域から他の領域に対する参照
+ * パーマネント領域からほかの領域に対する参照
  * 退避用記憶集合
  * etc...
 
@@ -316,7 +316,7 @@ HotspotVMにはルートスキャンをおこなう@<code>{process_strong_roots(
 168:   if (!_process_strong_tasks->is_task_claimed(SH_PS_jvmti_oops_do))
 169:     JvmtiExport::oops_do(roots);
 
-         /* ... 他のルートスキャン ... */
+         /* ... ほかのルートスキャン ... */
 
 221:   _process_strong_tasks->all_tasks_completed();
 222: }
@@ -539,7 +539,7 @@ G1GCではバッファを一気に処理する箇所を計測して、オブジ�
 ==[column] タスクスティーリング
 並行マークフェーズは複数のスレッドを使ってオブジェクトのスキャンというタスクをこなします。
 ここで気になるのが仕事量の問題です。
-もしスレッドAがこなす仕事量が多ければ、他のスレッドBはスレッドAのタスクが終了するのを待たなければなりません。
+もしスレッドAがこなす仕事量が多ければ、ほかのスレッドBはスレッドAのタスクが終了するのを待たなければなりません。
 この場合、スレッドBはタスクをこなさない状態で待つことになります。
 これは無駄ですよね。
 機械にサボらせてはいけません。

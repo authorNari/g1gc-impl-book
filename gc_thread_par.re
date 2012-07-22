@@ -211,7 +211,7 @@ workers->run_task(&marking_task);
 93行目で@<code>{allocate_worker()}を使って@<code>{GangWorker}を生成します。
 96行目でワーカースレッドを生成し、101行目でワーカースレッドの処理を開始します。
 
-93行目の@<code>{allocate_worker()}のソースコードは次の通りです。
+93行目の@<code>{allocate_worker()}のソースコードは次のとおりです。
 
 //source[share/vm/utilities/workgroup.cpp]{
 64: GangWorker* WorkGang::allocate_worker(int which) {
@@ -313,7 +313,7 @@ workers->run_task(&marking_task);
 //}
 
 タスクを引数に受け取った@<code>{run_task()}は、まず132行目でモニタのロックを取ります。
-その後、139行目でタスク情報を書き込み、140〜142行目でその他の情報も更新します。
+その後、139行目でタスク情報を書き込み、140〜142行目でそのほかの情報も更新します。
 これは@<img>{work_gang_do_task_2}と対応する部分です。
 
 //source[share/vm/utilities/workgroup.cpp:run_task()後半]{
@@ -366,7 +366,7 @@ workers->run_task(&marking_task);
 308:     data.task()->work(part);
 //}
 
-242行目の@<code>{previous_sequence_number}は名前の通り、以前のタスクの通し番号を記録するローカル変数です。
+242行目の@<code>{previous_sequence_number}は名前のとおり、以前のタスクの通し番号を記録するローカル変数です。
 
 244行目からの@<code>{for}ループが一度回るたびにワーカーは1つのタスク実行をこなします。
 245行目の@<code>{WorkData}は@<code>{WorkerGang}にあるタスクの情報（掲示板の情報）を記録するローカル変数です。
