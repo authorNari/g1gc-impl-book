@@ -7,7 +7,7 @@
 # ブック名(ファイル名になるもの。ASCII範囲の文字を使用)
 bookname: book
 # 書名
-booktitle: 徹底解剖「G1GC」実装編（執筆中）
+booktitle: 徹底解剖「G1GC」実装編（β版）
 # 著者
 aut: 中村成洋
 prt: www.narihiro.info

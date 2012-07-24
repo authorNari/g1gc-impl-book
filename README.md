@@ -1,4 +1,4 @@
-# 徹底解剖「G1GC」実装編（執筆中）
+# 徹底解剖「G1GC」実装編（β版）
 
 本書はOpenJDK7のG1GCの実装と、それに関連する技術を解説します。
 
@@ -27,28 +27,19 @@
 
 以下から（ある時点で）最新のebookをダウンロードできます。
 
- * [徹底解剖「G1GC」実装編-20120330.epub](http://www.narihiro.info/ebook/g1gc-impl-20120330.epub)
- * [徹底解剖「G1GC」実装編-20120330.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120330.mobi)
- * [徹底解剖「G1GC」実装編-20120330.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120330.pdf)
+ * [徹底解剖「G1GC」実装編-20120725.epub](http://www.narihiro.info/ebook/g1gc-impl-20120725.epub)
+ * [徹底解剖「G1GC」実装編-20120725.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120725.mobi)
+ * [徹底解剖「G1GC」実装編-20120725.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120725.pdf)
 
-## 「ある程度寄付が溜まったら本気出す」
-**目標に達しましたので寄付の受付を終了しています**
+## 謝辞
 
-本書はご覧の通り**（執筆中）**となっており、半分まで書いたところで無料公開しました。続きを読みたい方はぜひ寄付をしてください（ﾁﾗｯﾁﾗｯ
+本書はスポンサーのみなさまの金銭的支援によって執筆されました。
 
-寄付には以下をご利用ください。Paypalが使えて、匿名でも寄付できます。20万円を目標に設定しており、達成したら寄付の受付を終了し、残りの執筆に着手します。
+[スポンサーのみなさま](http://www.narihiro.info/g1gc-impl-book/sponsor.html)
 
-**寄付が目標額に達成し、後半の執筆が完了しても本書のすべてのコンテンツは無料で公開し続けます。**
-
-[Pledgie — Donate To: "Book: Implementation of G1GC"](http://www.pledgie.com/campaigns/16436)
+ありがとうございます！！
 
 <a href='http://www.pledgie.com/campaigns/16436'><img alt='Click here to lend your support to: Book: Implementation of G1GC and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/16436.png?skin_name=chrome' border='0' /></a>
-
-※寄付いただいたみなさまの名前は[スポンサーのみなさま](http://www.narihiro.info/g1gc-impl-book/sponsor.html)に随時追加します。
-
-みなさまの温かいご支援をおまちしております ﾟ+.(･ω･)ﾟ+.ﾟ
-
-[補足:寄付方式にした意図](http://d.hatena.ne.jp/authorNari/20111226/1324892029)
 
 ## 間違いの指摘・感想など
 
