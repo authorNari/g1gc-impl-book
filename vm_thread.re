@@ -217,7 +217,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 === STACK_SIZE_PARAM_IS_A_RESERVATIONフラグ
 
-ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定はかなりクセがあり、それを抑止するために@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグが指定されているようです。ソースコード（@<code>{os/windows/vm/os_windows.cpp}）内のコメントを簡単に以下に翻訳しました。
+ソースコード中のコメントによれば、@<code>{_beginthreadex()}の@<code>{stack_size}の指定にはかなりクセがあり、それを抑止するために@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}フラグが指定されているようです。ソースコード（@<code>{os/windows/vm/os_windows.cpp}）内のコメントを簡単に以下に翻訳しました。
 
 //quote{
 MSDNのドキュメントに書いてあることと実際の動作は違い、_beginthreadex()の"stack_size"はスレッドのスタックサイズを定義しません。
@@ -386,7 +386,7 @@ CPUのキャッシュラインとはキャッシュメモリに格納するデ�
  3. スレッド上で処理する関数のアドレス。
  4. 3.に指定した関数に渡す引数。
 
-954〜960行目で作成したスレッドが初期化されるのを待ちます。
+954〜960行目で、作成したスレッドが初期化されるのを待ちます。
 957行目の@<code>{while}ループで、スレッドの状態が@<code>{ALLOCATED}以外に書き換えられるのを待っています。
 スレッドの状態は@<code>{java_start()}の中で書き換えられます。
 つまり、作成したスレッドの準備が整い、スレッドの処理が実際に実行された時に@<code>{while}ループを抜けます。

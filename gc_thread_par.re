@@ -48,7 +48,7 @@ HotspotVMには複数のスレッドで並列に「何かのタスク」を実�
 
 //image[work_gang_do_task_4][4. タスクを終えたワーカーは再度モニタに入り、掲示板の情報を書き換えた後で待合室に入る。]
 
-そして、待合室の全員を呼び出し（クライアントを含む）、自分は待合室に入ります。
+そして、待合室の全員（クライアントを含む）を呼び出し、自分は待合室に入ります。
 ワーカーのタスク実行がすべて終了すると、実行ワーカー総数は実行完了ワーカー総数と同じになります。
 
 クライアントはモニタに入ると、掲示板ですべてのワーカーが終了したか確認します（@<img>{work_gang_do_task_5}）。
@@ -222,10 +222,9 @@ workers->run_task(&marking_task);
 
 @<code>{this}（自分の所属する@<code>{AbstractWorkGang}）と、ワーカーの識別番号を引数にして、@<code>{GangWorker}のインスタンスを作っています。
 
-さて、@<code>{initialize_workers()}内の@<code>{os::start_thread()}によって、スレッドの処理は実行しています。
-@<code>{GangWorker}は@<code>{Thread}を継承したクラスです。
-スレッドは処理を開始すると子クラスの@<code>{run()}メソッドを呼び出すのでしたね。
-この場合は@<code>{GangWorker}クラスの@<code>{run()}が呼び出されます。
+@<code>{initialize_workers()}内の@<code>{os::start_thread()}によって、スレッドの処理は実行されます。
+@<code>{GangWorker}は@<code>{Thread}を継承したクラスですので、スレッドは処理を開始する@<code>{run()}メソッドを呼び出します。
+@<code>{GangWorker}クラスの@<code>{run()}を見てみましょう。
 
 //source[share/vm/utilities/workgroup.cpp]{
 222: void GangWorker::run() {

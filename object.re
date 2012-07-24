@@ -52,7 +52,7 @@ HotspotVMでは、@<code>{oopDesc}インスタンスのポインタ（@<code>{oo
 54: typedef class   compiledICHolderOopDesc*    compiledICHolderOop;
 //}
 
-すべて@<code>{Desc}を取り除いた名前に別名定義されています。
+@<code>{Desc}を取り除いた名前にすべて別名定義されています。
 @<code>{oopDesc}の@<code>{Desc}は「Describe（表現）」の略です。
 つまり、@<code>{oopDesc}とは@<code>{oop}という実体（オブジェクト）をクラスとして「表現」しているものなのです。
 本章では@<code>{oopDesc}等のインスタンスを別名定義のルールに従って@<code>{oop}のように呼ぶことにします。
@@ -127,7 +127,7 @@ System.out.println(str.getClass().getClass().getClass()); // => java.lang.Class
 
 @<code>{oopDesc}クラスにはC++の仮想関数（virtual function）@<fn>{virtual_function}を定義してはいけない決まりになっています。
 
-クラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル@<fn>{vtable}へのポインタを勝手に付けてしまいます。
+クラスに仮想関数を定義するとC++のコンパイラがそのクラスのインスタンスに仮想関数テーブル（vtable）@<fn>{vtable}へのポインタを勝手に付けてしまいます。
 もし@<code>{oopDesc}に仮想関数を定義するとすべてのオブジェクトに対して1ワードが確保されてしまいます。
 これは空間効率が悪いので、@<code>{oopDesc}クラスにはC++の仮想関数を定義できないルールとなっています。
 
@@ -310,7 +310,7 @@ C++では関数呼び出しと同様の構文で明示的な型変換をおこ�
        }
 //}
 
-受け取ったポインタを@<code>{markOop}にキャストして、@<code>{set_marked()}を呼び出しているだけですね。
+受け取ったポインタを@<code>{markOop}にキャストして、@<code>{set_marked()}を呼び出しているだけです。
 
 //source[share/vm/oops/markOop.hpp]{
 158:   enum { locked_value             = 0,

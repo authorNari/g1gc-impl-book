@@ -11,7 +11,7 @@ booktitle: 徹底解剖「G1GC」実装編（執筆中）
 # 著者
 aut: 中村成洋
 prt: www.narihiro.info
-date: 2012-03-30
+date: 2012-07-25
 rights: |
   (C) 2012 Narihiro Nakamura
 description: 本書はOpenJDK7のG1GCの実装と、それに関連する技術を解説します。
@@ -48,8 +48,8 @@ params: --stylesheet=stylesheet.css --subdirmode
 # 目次生成用？
 mytoc: true
 # 奥付用
-#pubhistory: |
-#(none)
+pubhistory: |
+  2012年7月25日 発行
 # debug
 # debug: false
 debug: true
