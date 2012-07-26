@@ -15,7 +15,7 @@ HotspotVM内には、OSよって異なるスレッド操作を共通化する層
 
 == Threadクラス
 
-HotspotVM内ではスレッドを操作する基本的な機能を@<code>{Thread}クラスによって実装し、@<code>{Thread}クラスを継承した子クラスにの実装によってスレッドの振る舞いを決定します。
+HotspotVM内ではスレッドを操作する基本的な機能を@<code>{Thread}クラスによって実装し、@<code>{Thread}クラスを継承した子クラスの実装によってスレッドの振る舞いを決定します。
 @<img>{thread_hierarchy}に@<code>{Thread}クラスの継承関係を示します。
 
 //image[thread_hierarchy][Threadクラスの継承関係]
