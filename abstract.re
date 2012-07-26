@@ -77,7 +77,7 @@ VMヒープを表現する@<code>{CollectedHeap}クラスを詳しく見てい�
 @<code>{GenCollectedHeap}は複数のGCアルゴリズムから利用されますが、@<code>{G1CollectedHeap}はG1GCしか利用しません。
 
 注意して欲しいのは、@<code>{GenCollectedHeap}という名前から「世代別GCアルゴリズムはすべてこのヒープを利用するのだな」と推測してはいけないという点です。
-HotpotVMの並列GCやG1GCは@<code>{GenCollectedHeap}を利用しないにも関わらず世代別のアルゴリズムです。
+HotspotVMの並列GCやG1GCは@<code>{GenCollectedHeap}を利用しないにも関わらず世代別のアルゴリズムです。
 
 == CollectorPolicyクラス
 
