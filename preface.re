@@ -7,7 +7,7 @@
 
   * @<chap>{abstract} @<title>{abstract}
 
-現在、HotpostVMはG1GCを含めて5つものGCを実装しています。
+現在、HotspotVMはG1GCを含めて5つものGCを実装しています。
 ただ、それぞれのGCはすべてゼロから書かれたわけではありません。
 HotspotVMにはGCを作るための枠組みがしっかりと設計されており、その枠組みを利用してGCが実装されています。
 

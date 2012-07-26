@@ -17,7 +17,7 @@ Object referenceType = new Object();  // 参照型
 
 Javaの変数に格納される型として@<code>{int}、@<code>{float}といった@<b>{プリミティブ型}があります(@<list>{primitive_and_reference_type}の1行目)。
 プリミティブ型はJava上では数値として扱われます。
-それと同様にC++（HotpostVM）上でも@<code>{int}や@<code>{float}といった数値として扱われます。
+それと同様にC++（HotspotVM）上でも@<code>{int}や@<code>{float}といった数値として扱われます。
 
 一方、Objectクラス（またはその子クラス）のインスタンスを指す@<b>{参照型}があります(@<list>{primitive_and_reference_type}の2行目)。
 参照型はC++（HotspotVM）上ではオブジェクトへのポインタとして扱われます。
