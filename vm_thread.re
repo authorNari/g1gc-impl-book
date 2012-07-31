@@ -53,9 +53,9 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 まず、1.で@<code>{Thread}クラスのインスタンスを生成します。インスタンス生成時にスレッドを管理するためのリソースを初期化したり、スレッドを生成する前準備を行います。
 
-2.,3.,4.については@<img>{os_thread_start_end_fllow}に図示しました。
+2.,3.,4.については@<img>{os_thread_start_end_flow}に図示しました。
 
-//image[os_thread_start_end_fllow][スレッド生成・処理開始・処理終了の流れ図]
+//image[os_thread_start_end_flow][スレッド生成・処理開始・処理終了の流れ図]
 
 2.で実際にスレッドを生成します。この段階ではスレッドを一時停止した状態で作っておきます。
 
