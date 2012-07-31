@@ -189,7 +189,7 @@ class TwoControlPath {
 
 @<list>{TwoControlPath}の@<code>{main()}メソッドのバイトコードは次のとおりです。
 
-//list[TwoControlPath_bytecoe][TwoControlPath.java:バイトコード]{
+//list[TwoControlPath_bytecode][TwoControlPath.java:バイトコード]{
 pc( 0): aload_0
 pc( 1): arraylength
 pc( 2): ifne          14
@@ -203,7 +203,7 @@ pc(15): istore_1
 pc(16): return
 //}
 
-@<list>{TwoControlPath_bytecoe}には新しく@<code>{ifne}というニーモニックが登場しています。
+@<list>{TwoControlPath_bytecode}には新しく@<code>{ifne}というニーモニックが登場しています。
 @<code>{ifne}の命令内容は「オペランドスタックの先頭のint型の値を取り出し、その値は@<code>{0}でなければ指定したpcにジャンプする」です。
 pc2では@<code>{ifne 14}となっていますので、オペランドスタックの先頭の値（@<code>{args.length}）が@<code>{0}ではない場合、pc14にジャンプします。
 
@@ -216,7 +216,7 @@ pc13の時点でGCが発生すれば、ローカル変数1の型は参照型で�
 @<list>{TwoControlPath}では@<code>{args.length}が@<code>{0}であった場合と、それ以外の場合の型情報を記録しなければなりません。
 
 そこで抽象的インタプリタはバイトコードを「ベーシックブロック」という単位に切り分けます。
-@<list>{TwoControlPath_bytecoe}の場合は次のようになります。
+@<list>{TwoControlPath_bytecode}の場合は次のようになります。
 
 //list[TwoControlPath_abs_bb][TwoControlPath.java:バイトコード実行フロー（抽象的インタプリタ）]{
 BasicBlock#0
