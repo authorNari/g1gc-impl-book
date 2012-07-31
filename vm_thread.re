@@ -53,9 +53,9 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 
 まず、1.で@<code>{Thread}クラスのインスタンスを生成します。インスタンス生成時にスレッドを管理するためのリソースを初期化したり、スレッドを生成する前準備を行います。
 
-2.,3.,4.については@<img>{os_thread_start_end_fllow}に図示しました。
+2.,3.,4.については@<img>{os_thread_start_end_flow}に図示しました。
 
-//image[os_thread_start_end_fllow][スレッド生成・処理開始・処理終了の流れ図]
+//image[os_thread_start_end_flow][スレッド生成・処理開始・処理終了の流れ図]
 
 2.で実際にスレッドを生成します。この段階ではスレッドを一時停止した状態で作っておきます。
 
@@ -64,7 +64,7 @@ GCスレッドとして利用するクラスは、この@<code>{NamedThread}ク�
 4.のように、@<code>{run()}メンバ関数の処理が終わると、スレッドの処理は終了します。
 
 5.で@<code>{Thread}クラスのインスタンスを解放ます。
-その際にデクストラクタにてスレッドで利用してきたリソースも合わせて解放されます。
+その際にデストラクタにてスレッドで利用してきたリソースも合わせて解放されます。
 
 === OSThreadクラス
 
@@ -235,14 +235,14 @@ MSDNのドキュメントに書いてあることと実際の動作は違い、_
 ただ、JVMはCランタイムライブラリを利用するため、MSDNに従うとCreateThread()を直接呼ぶことができません(*2)。
 
 
-でも、いいニュースです。このフラグは_beginthredex()でもうまく動くようですよ！！
+でも、いいニュースです。このフラグは_beginthreadex()でもうまく動くようですよ！！
 
 *1:訳注 実行ファイルに定義される、実行に必要な設定を格納する場所のことをPEヘッダと呼ぶ。
 
-*2:訳注 そのため、_beginthreadx()を利用している。
+*2:訳注 そのため、_beginthreadex()を利用している。
 //}
 
-Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthredex()}の引数に指定している理由はわかりました。
+Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthreadex()}の引数に指定している理由はわかりました。
 
 == Windowsのスレッド処理開始
 
