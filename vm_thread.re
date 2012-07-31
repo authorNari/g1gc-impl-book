@@ -235,14 +235,14 @@ MSDNのドキュメントに書いてあることと実際の動作は違い、_
 ただ、JVMはCランタイムライブラリを利用するため、MSDNに従うとCreateThread()を直接呼ぶことができません(*2)。
 
 
-でも、いいニュースです。このフラグは_beginthredex()でもうまく動くようですよ！！
+でも、いいニュースです。このフラグは_beginthreadex()でもうまく動くようですよ！！
 
 *1:訳注 実行ファイルに定義される、実行に必要な設定を格納する場所のことをPEヘッダと呼ぶ。
 
-*2:訳注 そのため、_beginthreadx()を利用している。
+*2:訳注 そのため、_beginthreadex()を利用している。
 //}
 
-Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthredex()}の引数に指定している理由はわかりました。
+Windows APIの暗黒面を垣間見ましたが、@<code>{STACK_SIZE_PARAM_IS_A_RESERVATION}を@<code>{_beginthreadex()}の引数に指定している理由はわかりました。
 
 == Windowsのスレッド処理開始
 
