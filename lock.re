@@ -358,7 +358,7 @@ class Client {
 //emlistnum{
   void rent() {
     {
-      MonitorLoker locker(shop_monitor);
+      MonitorLocker locker(shop_monitor);
       while (rental_shop.snowboards.empty()) {
         shop_monitor.wait();
       }
@@ -367,8 +367,8 @@ class Client {
   }
 //}
 
-3行目で@<code>{MonitorLoker}インスタンスを生成する際に、コンストラクタによって@<code>{shop_monitor}がロックされます。
-8行目ではスタックに割り当てられた@<code>{MonitorLoker}インスタンスが解放されますので、デストラクタによって@<code>{shop_monitor}がアンロックされます。
+3行目で@<code>{MonitorLocker}インスタンスを生成する際に、コンストラクタによって@<code>{shop_monitor}がロックされます。
+8行目ではスタックに割り当てられた@<code>{MonitorLocker}インスタンスが解放されますので、デストラクタによって@<code>{shop_monitor}がアンロックされます。
 
 上記のように、@<code>{MutexLocker}クラスを利用するとロックが必要な処理の範囲がわかりやすくなります。
 また、大域脱出の際（例外発生時など）にモニタのアンロックをし忘れる、といった凡ミスも防ぐことができます。
