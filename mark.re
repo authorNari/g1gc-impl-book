@@ -585,7 +585,7 @@ HotspotVMではタスクスティーリングを簡単に利用できるユー�
 111: };
 //}
 
-@<code>{VM_Operation}クラスを継承したクラスで、コンストラクタに@<code>{VoidClosure}等を取ります。
+@<code>{VM_Operation}クラスを継承したクラスで、コンストラクタに@<code>{VoidClosure}などを取ります。
 
 //source[share/vm/gc_implementation/g1/vm_operations_g1.cpp]{
 156: void VM_CGC_Operation::doit() {
