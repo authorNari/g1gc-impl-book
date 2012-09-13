@@ -27,9 +27,9 @@
 
 以下から（ある時点で）最新のebookをダウンロードできます。
 
- * [徹底解剖「G1GC」実装編-20120725.epub](http://www.narihiro.info/ebook/g1gc-impl-20120725.epub)
- * [徹底解剖「G1GC」実装編-20120725.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120725.mobi)
- * [徹底解剖「G1GC」実装編-20120725.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120725.pdf)
+ * [徹底解剖「G1GC」実装編-20120915.epub](http://www.narihiro.info/ebook/g1gc-impl-20120914.epub)
+ * [徹底解剖「G1GC」実装編-20120914.mobi](http://www.narihiro.info/ebook/g1gc-impl-20120914.mobi)
+ * [徹底解剖「G1GC」実装編-20120914.pdf](http://www.narihiro.info/ebook/g1gc-impl-20120914.pdf)
 
 ## 謝辞
 
