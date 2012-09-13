@@ -7,11 +7,11 @@
 # ブック名(ファイル名になるもの。ASCII範囲の文字を使用)
 bookname: book
 # 書名
-booktitle: 徹底解剖「G1GC」実装編（β版）
+booktitle: 徹底解剖「G1GC」実装編
 # 著者
 aut: 中村成洋
 prt: www.narihiro.info
-date: 2012-07-25
+date: 2012-09-14
 rights: |
   (C) 2012 Narihiro Nakamura
 description: 本書はOpenJDK7のG1GCの実装と、それに関連する技術を解説します。
@@ -49,7 +49,7 @@ params: --stylesheet=stylesheet.css --subdirmode
 mytoc: true
 # 奥付用
 pubhistory: |
-  2012年7月25日 発行
+  2012年9月14日 発行
 # debug
 # debug: false
 debug: true
