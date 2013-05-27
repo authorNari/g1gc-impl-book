@@ -143,7 +143,7 @@ HotspotVM内のほとんどのクラスは次の2つのクラスのいずれか�
 
 @<code>{AllStatic}クラスは「静的な情報のみをもつクラス」という意味を持つ特殊なクラスです。
 
-@<code>{AllStatic}クラスを継承したクラスはインスタンスを生成なくなります。
+@<code>{AllStatic}クラスを継承したクラスはインスタンスを生成しなくなります。
 そのため、グローバル変数や関数を1つの名前空間にまとめたいときに、@<code>{AllStatic}クラスを継承します。
 継承するクラスにはグローバル変数やそのアクセサ、静的（static）なメンバ関数など、クラスから使える情報のみが定義されます。
 
@@ -173,7 +173,7 @@ HotspotVMはさまざまなOS上で動作する必要があります。
 上記ファイルはOpenJDKのビルド時に各OSに合う適切なものが選択され、コンパイル・リンクされます。
 @<code>{os/posix/vm/os_posix.cpp}はPOSIX API準拠のOS（LinuxとSorarisの両方）に対してリンクされます。例えばLinux環境では@<code>{os/posix/vm/os_posix.cpp}と@<code>{os/linux/vm/os_linux.cpp}がリンクされます。
 
-そのため、例えば上記の@<code>{share/vm/runtime/os.hpp}で定義されている@<code>{os::reserve_memory()}を呼び出し時には、各OSで別々の@<code>{os::reserve_memory}が実行されます。
+そのため、例えば上記の@<code>{share/vm/runtime/os.hpp}で定義されている@<code>{os::reserve_memory()}の呼び出し時には、各OSで別々の@<code>{os::reserve_memory}が実行されます。
 
 @<code>{os:xxx()}というメンバ関数はソースコード上によく登場しますので、よく覚えておいてください。
 
